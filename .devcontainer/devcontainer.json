@@ -1,0 +1,97 @@
+{
+  "name": "多姿态人脸生成系统",
+  
+  // 使用 build 方式（如果镜像不存在会自动构建）
+  "build": {
+    "context": "..",
+    "dockerfile": "../Dockerfile"
+  },
+  
+  // 或者直接使用已构建的镜像（取消注释下面这行，并注释上面的 build）
+  // "image": "face-gen:latest",
+  
+  // 容器特性
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true,
+      "username": "vscode",
+      "uid": "1000",
+      "gid": "1000"
+    }
+  },
+  
+  // 挂载卷
+  "mounts": [
+    "source=${localWorkspaceFolder}/features,target=/app/features,type=bind",
+    "source=${localWorkspaceFolder}/features_arcface,target=/app/features_arcface,type=bind",
+    "source=${localWorkspaceFolder}/generated_poses,target=/app/generated_poses,type=bind",
+    "source=${localWorkspaceFolder}/output,target=/app/output,type=bind",
+    "source=${localWorkspaceFolder}/input,target=/app/input,type=bind,consistency=cached",
+    // 挂载 HuggingFace 缓存（加速模型下载）
+    "source=${localEnv:HOME}/.cache/huggingface,target=/root/.cache/huggingface,type=bind,consistency=cached"
+  ],
+  
+  // 工作目录
+  "workspaceFolder": "/app",
+  
+  // 环境变量
+  "containerEnv": {
+    "PYTHONUNBUFFERED": "1",
+    "CUDA_VISIBLE_DEVICES": "0"
+  },
+  
+  // 远程用户
+  "remoteUser": "root",
+  
+  // 端口转发（如果需要 Web 服务）
+  // "forwardPorts": [8000],
+  
+  // 容器启动后执行的命令
+  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+  
+  // 容器启动时执行的命令
+  "postStartCommand": "echo 'Docker 环境已就绪！'",
+  
+  // 自定义属性
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.formatting.provider": "black",
+        "python.analysis.typeCheckingMode": "basic",
+        "files.watcherExclude": {
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/node_modules/*/**": true,
+          "**/.hg/store/**": true,
+          "**/features/**": true,
+          "**/generated_poses/**": true
+        }
+      }
+    }
+  },
+  
+  // GPU 支持（需要 Docker Desktop 或 nvidia-docker）
+  "runArgs": [
+    "--gpus=all"
+  ],
+  
+  // 特权模式（某些功能需要）
+  // "privileged": true,
+  
+  // 容器启动后等待时间（秒）
+  "waitFor": "postCreateCommand"
+}
+

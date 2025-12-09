@@ -1,0 +1,28 @@
+# PyTorch 核心库（固定版本以确保兼容性）
+# torch==2.2.2
+# torchvision==0.17.2
+# 注意：torch 2.2.2 需要 torchvision 0.17.2，必须版本匹配
+
+# 人脸检测和特征提取
+facenet-pytorch>=2.5.3
+Pillow>=10.0.0
+numpy>=1.24.0,<2.0.0
+opencv-python>=4.8.0
+timm>=0.9.0
+
+# Transformers 和 AI 模型（兼容 torch 2.2.2）
+transformers>=4.30.0,<5.0.0
+safetensors>=0.4.0  # 用于安全加载模型（避免torch.load版本限制）
+scikit-learn>=1.3.0
+insightface>=0.7.3
+onnxruntime>=1.15.0
+
+# 可视化
+matplotlib>=3.7.0
+
+# 多姿态人脸生成依赖（可选）
+diffusers>=0.21.0,<1.0.0
+controlnet-aux>=0.0.10  # 注意：最新版本是 0.0.10，不是 0.4.0
+accelerate>=0.20.0
+xformers>=0.0.20  # 可选，用于优化显存
+
