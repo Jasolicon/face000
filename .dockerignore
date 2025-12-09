@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# 模型和特征文件（可选，根据需要调整）
+features/
+features_arcface/
+generated_poses/
+output/
+*.npy
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# 图像文件（可选，根据需要调整）
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.gif
+
+# 视频文件
+*.mp4
+*.avi
+*.mov
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# 文档（可选）
+*.md
+!README.md
+
+# 测试文件
+test_*.py
+*_test.py
+

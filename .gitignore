@@ -1,0 +1,126 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 模型文件（大文件）
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pb
+*.onnx
+*.tflite
+*.pkl
+*.pickle
+*.model
+*.weights
+*.safetensors
+
+# 特征文件（大文件）
+*.npy
+*.npz
+*.hdf5
+*.h5
+
+# 检查点和日志
+checkpoints/
+logs/
+*.log
+*.tensorboard
+*.tfevents.*
+
+# 数据集相关（大文件）
+train/datas/video/**/*.mp4
+train/datas/video/**/*.avi
+train/datas/video/**/*.mov
+train/datas/video/**/*.mkv
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# 特征库目录（大文件）
+features_224/
+features_96/
+features_20/
+features/
+
+# 训练输出图片
+*.jpg
+*.jpeg
+*.png
+!train/datas/**/*.jpg
+!train/datas/**/*.jpeg
+!train/datas/**/*.png
+!*.md
+!README.md
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# 特定项目文件
+landmark_analysis_mtcnn/
+train_transformer/logs/
+train_transformer/checkpoints/
+train_transformer/valid_images.json
+
+# 其他大文件
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
