@@ -2,6 +2,11 @@
 使用 InsightFace 和 DINOv2 提取特征，计算相似度并添加到 landmark_angles.txt
 """
 import os
+
+# 在导入任何可能使用 HuggingFace 的库之前设置镜像
+if 'HF_ENDPOINT' not in os.environ:
+    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
 import cv2
 import numpy as np
 from PIL import Image

@@ -179,15 +179,20 @@ def visualize_landmarks(image_path, landmarks, box, save_path=None):
     pil_img = Image.open(image_path).convert('RGB')
     draw = ImageDraw.Draw(pil_img)
     
-    # 尝试加载中文字体
+    # 尝试加载中文字体（支持跨平台）
     try:
-        # Windows 系统字体
-        font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 20)  # 黑体
-    except:
+        from font_utils import get_chinese_font_pil
+        font = get_chinese_font_pil(20)
+    except ImportError:
+        # 如果 font_utils 不可用，使用旧方法
         try:
-            font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 20)  # 微软雅黑
+            # Windows 系统字体
+            font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 20)  # 黑体
         except:
-            font = ImageFont.load_default()  # 默认字体（可能不支持中文）
+            try:
+                font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 20)  # 微软雅黑
+            except:
+                font = ImageFont.load_default()  # 默认字体（可能不支持中文）
     
     # 绘制边界框（绿色）
     draw.rectangle([(int(box[0]), int(box[1])), (int(box[2]), int(box[3]))], 

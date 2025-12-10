@@ -5,7 +5,7 @@
 
 # 人脸检测和特征提取
 facenet-pytorch>=2.5.3
-Pillow>=10.0.0
+Pillow==10.2.0 --only-binary=:all:
 numpy>=1.24.0,<2.0.0
 opencv-python>=4.8.0
 timm>=0.9.0
@@ -21,8 +21,8 @@ onnxruntime>=1.15.0
 matplotlib>=3.7.0
 
 # 多姿态人脸生成依赖（可选）
-diffusers>=0.21.0,<1.0.0
-controlnet-aux>=0.0.10  # 注意：最新版本是 0.0.10，不是 0.4.0
+#diffusers>=0.21.0,<1.0.0
+#controlnet-aux>=0.0.10  # 注意：最新版本是 0.0.10，不是 0.4.0
 accelerate>=0.20.0
-xformers>=0.0.20  # 可选，用于优化显存
+#xformers>=0.0.20  # 可选，用于优化显存
 

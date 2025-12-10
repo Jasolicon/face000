@@ -2,6 +2,12 @@
 多角度人脸识别模型
 基于DINO + 孪生网络
 """
+import os
+
+# 在导入任何可能使用 HuggingFace 的库之前设置镜像
+if 'HF_ENDPOINT' not in os.environ:
+    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,7 +30,12 @@ class DINOFeatureExtractor(nn.Module):
         """
         super().__init__()
         
+        # 确保使用镜像（在调用 timm.create_model 前）
+        if 'HF_ENDPOINT' not in os.environ:
+            os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+        
         # 加载DINO模型
+        # timm 会通过 huggingface_hub 下载，使用 HF_ENDPOINT 环境变量
         self.backbone = timm.create_model(
             model_name,
             pretrained=True,

@@ -51,6 +51,7 @@ Thumbs.db
 *.model
 *.weights
 *.safetensors
+!train_transformer/checkpoints/best_model.pth
 
 # 特征文件（大文件）
 *.npy
