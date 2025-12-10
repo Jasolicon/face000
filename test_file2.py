@@ -708,7 +708,7 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
 def main():
     """主函数"""
     # 视频路径
-    video_path = r'C:\AIXLAB\video_batch_deployment\temp_data\垂杨柳上课视频 (2).mp4'
+    video_path = r"D:\Code\face000\datas\camera\5-6班人脸视频cut\刘子源\281.jpg"
     # video_path = r"C:\AIXLAB\DATA\video\101_2025-10-27-09-30-04_classroom.mp4"
     
     # 特征存储目录

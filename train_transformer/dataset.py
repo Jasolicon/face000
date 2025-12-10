@@ -101,10 +101,16 @@ class TransformerFaceDataset(Dataset):
         
         # 初始化特征提取器和检测器
         logger.info(f"初始化DINOv2特征提取器（模型: {dinov2_model_name}）...")
+        # 尝试从指定目录加载模型（避免重复下载）
+        model_dir = os.environ.get('DINOV2_MODEL_DIR', None)
+        if model_dir:
+            logger.info(f"  使用模型目录: {model_dir}")
+        
         self.feature_extractor = DINOv2FeatureExtractor(
             model_name=dinov2_model_name,
             resize_to_96=False,
-            device=None if not use_cpu else 'cpu'
+            device=None if not use_cpu else 'cpu',
+            model_dir=model_dir
         )
         
         logger.info("初始化InsightFace检测器...")

@@ -435,8 +435,35 @@ def plot_training_curves(train_losses, val_losses, train_cosine_losses=None,
     plt.close()
 
 
-def save_checkpoint(model, optimizer, epoch, loss, save_path, best=False):
-    """保存模型检查点"""
+def save_checkpoint(model, optimizer, epoch, loss, save_path, best=False, max_retries=3):
+    """
+    保存模型检查点（带错误处理和重试机制）
+    
+    Args:
+        model: 模型
+        optimizer: 优化器
+        epoch: 当前epoch
+        loss: 损失值
+        save_path: 保存路径
+        best: 是否为最佳模型
+        max_retries: 最大重试次数
+    """
+    import shutil
+    
+    save_path = Path(save_path)
+    
+    # 确保保存目录存在
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # 检查磁盘空间（至少需要500MB）
+    try:
+        stat = shutil.disk_usage(save_path.parent)
+        free_space_gb = stat.free / (1024**3)
+        if free_space_gb < 0.5:
+            print(f"⚠️  警告: 磁盘空间不足 ({free_space_gb:.2f} GB)，可能无法保存模型")
+    except Exception as e:
+        print(f"⚠️  无法检查磁盘空间: {e}")
+    
     checkpoint = {
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
@@ -444,8 +471,60 @@ def save_checkpoint(model, optimizer, epoch, loss, save_path, best=False):
         'loss': loss,
         'best': best
     }
-    torch.save(checkpoint, save_path)
-    print(f"模型已保存到: {save_path}")
+    
+    # 先保存到临时文件，然后重命名（原子操作）
+    temp_path = save_path.with_suffix('.tmp')
+    
+    # 重试机制
+    for attempt in range(max_retries):
+        try:
+            # 如果临时文件存在，先删除
+            if temp_path.exists():
+                temp_path.unlink()
+            
+            # 保存到临时文件
+            torch.save(checkpoint, temp_path)
+            
+            # 原子操作：重命名临时文件为最终文件
+            if save_path.exists():
+                save_path.unlink()  # 删除旧文件
+            temp_path.rename(save_path)
+            
+            # 验证文件是否成功保存
+            if save_path.exists() and save_path.stat().st_size > 0:
+                file_size_mb = save_path.stat().st_size / (1024**2)
+                print(f"✓ 模型已保存到: {save_path} ({file_size_mb:.2f} MB)")
+                return True
+            else:
+                raise RuntimeError("保存的文件为空或不存在")
+                
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 2  # 递增等待时间
+                print(f"⚠️  保存失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                print(f"   等待 {wait_time} 秒后重试...")
+                time.sleep(wait_time)
+            else:
+                # 最后一次尝试失败
+                error_msg = f"❌ 保存模型失败 (已重试 {max_retries} 次): {e}\n"
+                error_msg += f"   保存路径: {save_path}\n"
+                error_msg += f"   请检查:\n"
+                error_msg += f"   1. 磁盘空间是否充足\n"
+                error_msg += f"   2. 目录是否有写入权限\n"
+                error_msg += f"   3. 磁盘是否有I/O错误\n"
+                
+                # 尝试保存到备用位置
+                try:
+                    backup_path = save_path.parent / f"{save_path.stem}_backup{save_path.suffix}"
+                    torch.save(checkpoint, backup_path)
+                    error_msg += f"   已尝试保存到备用位置: {backup_path}\n"
+                except Exception as backup_e:
+                    error_msg += f"   备用保存也失败: {backup_e}\n"
+                
+                print(error_msg)
+                raise RuntimeError(error_msg)
+    
+    return False
 
 
 def main():
@@ -470,10 +549,14 @@ def main():
     # use_amp 通过 --no_amp 控制（默认启用）
     parser.add_argument('--epochs', type=int, default=100,
                        help='训练轮数')
-    parser.add_argument('--lr', type=float, default=1e-4,
-                       help='学习率')
-    parser.add_argument('--weight_decay', type=float, default=1e-5,
-                       help='权重衰减')
+    parser.add_argument('--lr', type=float, default=2e-4,
+                       help='学习率（推荐2e-4，可根据模型大小调整）')
+    parser.add_argument('--weight_decay', type=float, default=1e-4,
+                       help='权重衰减（推荐1e-4，防止过拟合）')
+    parser.add_argument('--warmup_epochs', type=int, default=5,
+                       help='学习率预热轮数（前N个epoch线性增加学习率）')
+    parser.add_argument('--warmup_lr', type=float, default=1e-6,
+                       help='预热起始学习率')
     parser.add_argument('--loss_type', type=str, default='residual_and_final',
                        choices=['cosine', 'mse', 'combined', 'residual_and_final'],
                        help='损失函数类型')
@@ -481,15 +564,21 @@ def main():
                        help='余弦损失权重（仅combined和residual_and_final损失）')
     parser.add_argument('--mse_weight', type=float, default=0.5,
                        help='MSE损失权重（仅combined和residual_and_final损失）')
-    parser.add_argument('--residual_weight', type=float, default=0.5,
-                       help='残差损失权重（仅residual_and_final损失）')
-    parser.add_argument('--final_weight', type=float, default=0.5,
-                       help='最终特征损失权重（仅residual_and_final损失）')
-    parser.add_argument('--use_scheduler', action='store_true',
-                       help='是否使用学习率调度器')
+    parser.add_argument('--residual_weight', type=float, default=0.6,
+                       help='残差损失权重（仅residual_and_final损失，推荐0.6-0.7）')
+    parser.add_argument('--final_weight', type=float, default=0.4,
+                       help='最终特征损失权重（仅residual_and_final损失，推荐0.3-0.4）')
+    parser.add_argument('--use_scheduler', action='store_true', default=True,
+                       help='是否使用学习率调度器（默认启用）')
     parser.add_argument('--scheduler_type', type=str, default='cosine',
                        choices=['cosine', 'step', 'plateau'],
-                       help='学习率调度器类型')
+                       help='学习率调度器类型（推荐cosine）')
+    parser.add_argument('--scheduler_eta_min', type=float, default=1e-6,
+                       help='Cosine调度器最小学习率')
+    parser.add_argument('--scheduler_patience', type=int, default=10,
+                       help='ReduceLROnPlateau调度器的patience')
+    parser.add_argument('--scheduler_factor', type=float, default=0.5,
+                       help='ReduceLROnPlateau调度器的衰减因子')
     parser.add_argument('--d_model', type=int, default=None,
                        help='模型维度（如果为None，将自动从数据集检测）')
     parser.add_argument('--nhead', type=int, default=8,
@@ -498,8 +587,8 @@ def main():
                        help='编码器层数')
     parser.add_argument('--dim_feedforward', type=int, default=2048,
                        help='前馈网络维度')
-    parser.add_argument('--dropout', type=float, default=0.1,
-                       help='Dropout比率')
+    parser.add_argument('--dropout', type=float, default=0.15,
+                       help='Dropout比率（推荐0.15，防止过拟合）')
     parser.add_argument('--model_type', type=str, default='lightweight_transformer',
                        choices=['transformer', 'lightweight_transformer', 'mlp', 'residual_mlp'],
                        help='模型类型：transformer(标准), lightweight_transformer(轻量级Transformer), mlp(MLP), residual_mlp(残差MLP)')
@@ -546,6 +635,29 @@ def main():
     save_dir.mkdir(parents=True, exist_ok=True)
     log_dir = Path(args.log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 检查保存目录的磁盘空间和权限
+    try:
+        import shutil
+        stat = shutil.disk_usage(save_dir)
+        free_space_gb = stat.free / (1024**3)
+        total_space_gb = stat.total / (1024**3)
+        print(f"保存目录: {save_dir}")
+        print(f"磁盘空间: {free_space_gb:.2f} GB / {total_space_gb:.2f} GB (可用/总计)")
+        if free_space_gb < 1.0:
+            print(f"⚠️  警告: 可用磁盘空间不足 ({free_space_gb:.2f} GB)，建议至少保留 1 GB")
+        
+        # 测试写入权限
+        test_file = save_dir / '.write_test'
+        try:
+            test_file.write_text('test')
+            test_file.unlink()
+            print(f"✓ 保存目录有写入权限")
+        except Exception as e:
+            print(f"❌ 保存目录无写入权限: {e}")
+            raise
+    except Exception as e:
+        print(f"⚠️  无法检查保存目录: {e}")
     
     # 设备
     device = torch.device('cpu' if args.use_cpu else ('cuda' if torch.cuda.is_available() else 'cpu'))
@@ -776,27 +888,63 @@ def main():
     # 更新args以便传递给train_epoch
     args.use_amp = use_amp
     
-    # 学习率调度器
+    # 学习率调度器（带Warmup）
     scheduler = None
+    warmup_scheduler = None
+    
+    if args.warmup_epochs > 0:
+        # Warmup阶段：线性增加学习率
+        def warmup_lambda(epoch):
+            if epoch < args.warmup_epochs:
+                return args.warmup_lr / args.lr + (1 - args.warmup_lr / args.lr) * (epoch / args.warmup_epochs)
+            else:
+                return 1.0
+        
+        warmup_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lambda)
+        print(f"✓ 启用学习率预热: {args.warmup_epochs} epochs (从 {args.warmup_lr:.2e} 到 {args.lr:.2e})")
+    
     if args.use_scheduler:
         if args.scheduler_type == 'cosine':
-            scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                optimizer, T_max=args.epochs, eta_min=args.lr * 0.01
+            # Cosine退火调度器（在warmup之后生效）
+            main_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=max(1, args.epochs - args.warmup_epochs), eta_min=args.scheduler_eta_min
             )
+            # 组合warmup和cosine调度器
+            if warmup_scheduler is not None and args.warmup_epochs > 0:
+                from torch.optim.lr_scheduler import SequentialLR
+                scheduler = SequentialLR(
+                    optimizer,
+                    schedulers=[warmup_scheduler, main_scheduler],
+                    milestones=[args.warmup_epochs]
+                )
+            else:
+                scheduler = main_scheduler
         elif args.scheduler_type == 'step':
-            scheduler = optim.lr_scheduler.StepLR(
-                optimizer, step_size=args.epochs // 3, gamma=0.5
+            main_scheduler = optim.lr_scheduler.StepLR(
+                optimizer, step_size=max(1, (args.epochs - args.warmup_epochs) // 3), gamma=args.scheduler_factor
             )
+            if warmup_scheduler is not None and args.warmup_epochs > 0:
+                from torch.optim.lr_scheduler import SequentialLR
+                scheduler = SequentialLR(
+                    optimizer,
+                    schedulers=[warmup_scheduler, main_scheduler],
+                    milestones=[args.warmup_epochs]
+                )
+            else:
+                scheduler = main_scheduler
         else:  # plateau
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode='min', factor=0.5, patience=10, verbose=True
+                optimizer, mode='min', factor=args.scheduler_factor, 
+                patience=args.scheduler_patience, verbose=True
             )
-        print(f"使用学习率调度器: {args.scheduler_type}")
+        print(f"✓ 使用学习率调度器: {args.scheduler_type}")
     else:
         # 默认使用ReduceLROnPlateau（不通过参数控制）
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='min', factor=0.5, patience=10, verbose=True
+            optimizer, mode='min', factor=args.scheduler_factor, 
+            patience=args.scheduler_patience, verbose=True
         )
+        print(f"✓ 使用默认学习率调度器: ReduceLROnPlateau")
     
     # TensorBoard
     writer = SummaryWriter(log_dir=str(log_dir))
@@ -853,6 +1001,11 @@ def main():
             else:
                 scheduler.step()
         
+        # 获取当前学习率
+        current_lr = optimizer.param_groups[0]['lr']
+        if epoch == 0 or (epoch + 1) % 10 == 0:
+            print(f"当前学习率: {current_lr:.2e}")
+        
         # 记录到TensorBoard
         writer.add_scalar('Loss/Train', train_metrics['loss'], epoch)
         writer.add_scalar('Loss/Val', val_metrics['loss'], epoch)
@@ -881,16 +1034,16 @@ def main():
         if val_metrics['cosine_similarity'] > 0:
             print(f"验证余弦相似度: {val_metrics['cosine_similarity']:.6f}")
         
-        # 保存检查点
-        checkpoint_path = save_dir / f'checkpoint_epoch_{epoch+1}.pth'
-        save_checkpoint(model, optimizer, epoch, val_metrics['loss'], checkpoint_path)
-        
-        # 保存最佳模型
+        # 只保存最佳模型（不保存每个epoch的检查点，节省磁盘空间）
         if val_metrics['loss'] < best_val_loss:
             best_val_loss = val_metrics['loss']
-            best_model_path = save_dir / 'best_model.pth'
-            save_checkpoint(model, optimizer, epoch, val_metrics['loss'], best_model_path, best=True)
-            print(f"✓ 保存最佳模型 (验证损失: {best_val_loss:.6f})")
+            try:
+                best_model_path = save_dir / 'best_model.pth'
+                if save_checkpoint(model, optimizer, epoch, val_metrics['loss'], best_model_path, best=True):
+                    print(f"✓ 保存最佳模型 (验证损失: {best_val_loss:.6f}, Epoch {epoch+1})")
+            except Exception as e:
+                print(f"❌ 保存最佳模型失败: {e}")
+                print("   训练将继续，但最佳模型未保存")
         
         # 每10个epoch保存一次训练曲线
         if (epoch + 1) % 10 == 0:

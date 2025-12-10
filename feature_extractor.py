@@ -131,7 +131,7 @@ class DINOFeatureExtractor:
 class DINOv2FeatureExtractor:
     """使用 DINOv2 提取图像特征"""
     
-    def __init__(self, model_name='dinov2_vits14', device=None, resize_to_96=True):
+    def __init__(self, model_name='dinov2_vits14', device=None, resize_to_96=True, model_dir=None):
         """
         初始化 DINOv2 特征提取器
         
@@ -139,6 +139,7 @@ class DINOv2FeatureExtractor:
             model_name: DINOv2 模型名称 ('dinov2_vits14' 小模型, 'dinov2_vitb14' 中等模型)
             device: 计算设备 ('cuda' 或 'cpu')，如果为None则自动选择
             resize_to_96: 是否在提取特征前先缩放到 96*96
+            model_dir: 模型文件目录（如果提供，将从该目录加载模型，避免重复下载）
         """
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -147,6 +148,7 @@ class DINOv2FeatureExtractor:
         
         self.resize_to_96 = resize_to_96
         self.model_name = model_name
+        self.model_dir = Path(model_dir) if model_dir else None
         
         # 设置模型下载镜像（在加载模型前）
         try:
@@ -160,24 +162,72 @@ class DINOv2FeatureExtractor:
         # 默认使用 DINOv2 ViT-S/14（小模型），如果失败则使用 vit_base_patch16_224 作为备用
         self.use_dinov2 = False
         
-        # 首先尝试使用 torch.hub 加载 DINOv2 模型
-        try:
-            print(f"  尝试从 torch.hub 加载 DINOv2 {model_name}...")
-            # 使用 torch.hub 加载 DINOv2 模型
-            self.model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=True)
-            self.model.eval()
-            self.model.to(self.device)
-            self.use_dinov2 = True
-            print(f"  ✓ 成功加载 DINOv2 {model_name} 模型")
-            print(f"  模型缓存位置: ~/.cache/torch/hub/checkpoints/")
-            # 注意：小模型(dinov2_vits14)的特征维度是384，中等模型(dinov2_vitb14)是768
-            if model_name == 'dinov2_vits14':
-                print(f"  提示: 使用小模型，特征维度为384（而非768）")
-        except Exception as e:
-            print(f"  ✗ 无法加载 DINOv2 {model_name}: {str(e)}")
-            print(f"  提示: 运行 'python download_dinov2.py' 可以提前下载模型")
-            print(f"  将使用备用模型: vit_base_patch16_224")
-            self.use_dinov2 = False
+        # 首先尝试从指定目录加载模型（如果提供）
+        if self.model_dir is not None:
+            model_path = self.model_dir / f"{model_name}.pth"
+            if model_path.exists():
+                try:
+                    print(f"  从本地路径加载 DINOv2 {model_name}: {model_path}")
+                    # 先创建模型结构
+                    self.model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=False)
+                    # 加载权重
+                    state_dict = torch.load(model_path, map_location='cpu')
+                    self.model.load_state_dict(state_dict)
+                    self.model.eval()
+                    self.model.to(self.device)
+                    self.use_dinov2 = True
+                    print(f"  ✓ 成功从本地路径加载 DINOv2 {model_name} 模型")
+                    if model_name == 'dinov2_vits14':
+                        print(f"  提示: 使用小模型，特征维度为384（而非768）")
+                except Exception as e:
+                    print(f"  ⚠️  从本地路径加载失败: {e}")
+                    print(f"  将尝试从 torch.hub 加载...")
+                    self.use_dinov2 = False
+        
+        # 如果本地加载失败或未提供路径，尝试使用 torch.hub 加载
+        if not self.use_dinov2:
+            try:
+                print(f"  尝试从 torch.hub 加载 DINOv2 {model_name}...")
+                # 如果指定了model_dir，设置torch.hub的缓存目录
+                if self.model_dir is not None:
+                    # 设置torch.hub的下载目录
+                    original_hub_dir = torch.hub.get_dir()
+                    torch.hub.set_dir(str(self.model_dir))
+                    try:
+                        self.model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=True)
+                    finally:
+                        # 恢复原始目录
+                        torch.hub.set_dir(original_hub_dir)
+                else:
+                    # 使用默认缓存
+                    self.model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=True)
+                
+                self.model.eval()
+                self.model.to(self.device)
+                self.use_dinov2 = True
+                print(f"  ✓ 成功加载 DINOv2 {model_name} 模型")
+                if self.model_dir:
+                    print(f"  模型保存位置: {self.model_dir}")
+                else:
+                    print(f"  模型缓存位置: ~/.cache/torch/hub/checkpoints/")
+                
+                # 如果指定了model_dir，保存模型到该目录
+                if self.model_dir is not None:
+                    self.model_dir.mkdir(parents=True, exist_ok=True)
+                    model_path = self.model_dir / f"{model_name}.pth"
+                    if not model_path.exists():
+                        print(f"  保存模型到: {model_path}")
+                        torch.save(self.model.state_dict(), model_path)
+                        print(f"  ✓ 模型已保存到: {model_path}")
+                
+                # 注意：小模型(dinov2_vits14)的特征维度是384，中等模型(dinov2_vitb14)是768
+                if model_name == 'dinov2_vits14':
+                    print(f"  提示: 使用小模型，特征维度为384（而非768）")
+            except Exception as e:
+                print(f"  ✗ 无法加载 DINOv2 {model_name}: {str(e)}")
+                print(f"  提示: 运行 'python download_dinov2.py --model {model_name} --save_dir <路径>' 可以提前下载模型")
+                print(f"  将使用备用模型: vit_base_patch16_224")
+                self.use_dinov2 = False
         
         # 如果 DINOv2 加载失败，使用备用模型
         if not self.use_dinov2:

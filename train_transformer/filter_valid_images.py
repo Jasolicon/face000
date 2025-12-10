@@ -67,11 +67,17 @@ def filter_valid_images(
     detector = get_insightface_detector(use_cpu=use_cpu)
     
     logger.info(f"初始化DINOv2特征提取器（模型: {dinov2_model_name}）...")
+    # 尝试从指定目录加载模型（避免重复下载）
+    model_dir = os.environ.get('DINOV2_MODEL_DIR', None)
+    if model_dir:
+        logger.info(f"  使用模型目录: {model_dir}")
+    
     device = 'cpu' if use_cpu else None
     feature_extractor = DINOv2FeatureExtractor(
         model_name=dinov2_model_name,
         resize_to_96=False,
-        device=device
+        device=device,
+        model_dir=model_dir
     )
     
     # 获取所有正面图片的人名
