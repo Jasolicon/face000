@@ -429,26 +429,32 @@ def deduplicate_recognition_results(results, confidence_key='similarity'):
                 name_to_results[name] = []
             name_to_results[name].append((i, result))
     
-    # 对于每个姓名，只保留相似度最高的检测框
+    # 对于每个姓名，只保留相似度最高的检测框（同一画面不应该有多个同一个人）
     used_indices = set()
     
     for name, result_list in name_to_results.items():
         if len(result_list) > 1:
-            # 多个框匹配同一个姓名，按相似度排序（使用 similarity 字段）
+            # 多个框匹配同一个姓名，按相似度排序
             result_list.sort(key=lambda x: x[1].get(confidence_key, 0.0), reverse=True)
             
             # 保留相似度最高的
             best_idx, best_result = result_list[0]
             best_similarity = best_result.get(confidence_key, 0.0)
+            best_box = best_result.get('box', [0, 0, 0, 0])
+            best_area = best_result.get('box_area', (best_box[2]-best_box[0])*(best_box[3]-best_box[1]))
             used_indices.add(best_idx)
             
-            # 其他框改为"未识别"
+            # 其他框改为"未识别"（同一画面不应该有多个同一个人）
             for other_idx, other_result in result_list[1:]:
                 other_similarity = other_result.get(confidence_key, 0.0)
+                other_box = other_result.get('box', [0, 0, 0, 0])
+                other_area = other_result.get('box_area', (other_box[2]-other_box[0])*(other_box[3]-other_box[1]))
                 processed_results[other_idx]['name'] = '未识别'
                 processed_results[other_idx]['similarity'] = 0.0
                 processed_results[other_idx]['match'] = None
-                print(f"  去重: 框 {other_idx} 的识别结果 '{name}' 已被框 {best_idx} 使用（相似度更高: {best_similarity:.4f} > {other_similarity:.4f}）")
+                print(f"  去重: 框 {other_idx} 的识别结果 '{name}' 已被框 {best_idx} 使用（相似度更高）")
+                print(f"       框 {best_idx}: 相似度={best_similarity:.4f}, 框大小={best_area}")
+                print(f"       框 {other_idx}: 相似度={other_similarity:.4f}, 框大小={other_area}")
         else:
             # 只有一个框匹配这个姓名，直接保留
             used_indices.add(result_list[0][0])

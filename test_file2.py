@@ -48,20 +48,25 @@ class DINOv2FeatureExtractor:
         else:
             self.device = torch.device(device)
         
-        # 默认使用 DINOv2 ViT-B/14，如果失败则使用 vit_base_patch16_224 作为备用
+        # 默认使用 DINOv2 ViT-B/14（768维），如果失败则使用 vit_base_patch16_224 作为备用
+        # 注意：Transformer模型是用768维训练的，所以测试时必须使用dinov2_vitb14
+        self.model_name = model_name
         self.use_dinov2 = False
         
         try:
-            print(f"  尝试从 torch.hub 加载 DINOv2 ViT-B/14（默认模型）...")
+            print(f"  尝试从 torch.hub 加载 DINOv2 {model_name}...")
             # 使用 torch.hub 加载 DINOv2 模型
-            self.model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14', pretrained=True)
+            self.model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=True)
             self.model.eval()
             self.model.to(self.device)
             self.use_dinov2 = True
-            print(f"  ✓ 成功加载 DINOv2 ViT-B/14 模型")
+            feature_dim = 384 if model_name == 'dinov2_vits14' else 768 if model_name == 'dinov2_vitb14' else 1024 if model_name == 'dinov2_vitl14' else 1536
+            print(f"  ✓ 成功加载 DINOv2 {model_name} 模型（特征维度: {feature_dim}）")
+            if model_name != 'dinov2_vitb14':
+                print(f"  ⚠️  警告: Transformer模型是用768维训练的，当前使用{feature_dim}维模型可能导致维度不匹配！")
         except Exception as e:
-            print(f"  ✗ 无法加载 DINOv2 ViT-B/14: {str(e)}")
-            print(f"  提示: 运行 'python download_dinov2.py' 可以提前下载模型")
+            print(f"  ✗ 无法加载 DINOv2 {model_name}: {str(e)}")
+            print(f"  提示: 运行 'python download_dinov2.py --model {model_name}' 可以提前下载模型")
             print(f"  将使用备用模型: vit_base_patch16_224")
             self.use_dinov2 = False
             
@@ -334,7 +339,8 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
     print("\n正在初始化 DINOv2 特征提取器...")
     device = torch.device('cuda' if torch.cuda.is_available() and not use_cpu else 'cpu')
     print(f"  使用设备: {device}")
-    feature_extractor = DINOv2FeatureExtractor(device=device)
+    # 注意：必须使用 dinov2_vitb14 (768维)，因为Transformer模型是用768维训练的
+    feature_extractor = DINOv2FeatureExtractor(model_name='dinov2_vitb14', device=device)
     
     # 加载Transformer模型（如果提供）
     transformer_model = None
@@ -462,8 +468,15 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
                 continue
             
             # 使用 DINOv2 提取特征（从裁剪的人脸区域）
-            features = feature_extractor.extract_features(face_crop)
-            print(f"    特征提取成功，特征维度: {len(features)} (使用DINOv2提取InsightFace裁剪的人脸区域)")
+            # 注意：大脸可能需要更好的预处理，确保裁剪区域质量
+            original_features = feature_extractor.extract_features(face_crop)
+            face_width, face_height = face_crop.size
+            print(f"    特征提取成功，特征维度: {len(original_features)}, 人脸尺寸: {face_width}x{face_height}")
+            
+            # 初始化矫正后的特征（默认使用原始特征）
+            corrected_features = original_features.copy()
+            use_transformer = False
+            angles = None
             
             # 使用Transformer矫正特征（如果模型已加载且提供了参考图像）
             if transformer_model is not None and reference_image_path and reference_landmarks_3d is not None:
@@ -486,17 +499,21 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
                     )
                     
                     # 使用Transformer矫正特征
-                    features = correct_features_with_transformer(
+                    corrected_features = correct_features_with_transformer(
                         transformer_model, 
-                        features, 
+                        original_features, 
                         angles, 
                         device=device
                     )
+                    use_transformer = True
                     print(f"    ✓ 已使用Transformer矫正特征（平均角度: {angles.mean():.2f}°）")
                 else:
                     print(f"    ⚠️ 无法获取关键点，跳过Transformer矫正")
             elif transformer_model is not None:
                 print(f"    ⚠️ 未提供参考图像，跳过Transformer矫正")
+            
+            # 使用矫正后的特征进行后续处理
+            features = corrected_features
             
             # 检查特征数据库是否为空
             if feature_count == 0:
@@ -539,8 +556,7 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
                         })
                         continue
             
-            # 比对特征（使用余弦相似度，阈值0.25）
-            # 直接计算余弦相似度，不使用归一化版本
+            # 比对特征：同时使用原始特征和矫正后特征的相似度
             features_db, metadata_db = feature_manager.get_all_features()
             if features_db is not None and len(features_db) > 0:
                 # 打印特征库信息（仅第一次）
@@ -552,32 +568,65 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
                     print(f"    人员列表: {sorted(unique_names)}")
                     process_video_frame._printed_db_info = True
                 
-                # 计算与所有特征的余弦相似度
-                query_feat_norm = features / (np.linalg.norm(features) + 1e-8)
+                # 计算原始特征的相似度
+                original_feat_norm = original_features / (np.linalg.norm(original_features) + 1e-8)
                 db_feats_norm = features_db / (np.linalg.norm(features_db, axis=1, keepdims=True) + 1e-8)
-                cosine_similarities = np.dot(db_feats_norm, query_feat_norm)
+                original_similarities = np.dot(db_feats_norm, original_feat_norm)
                 
-                # 找到最高相似度
-                best_idx = np.argmax(cosine_similarities)
-                best_similarity = float(cosine_similarities[best_idx])
+                # 计算矫正后特征的相似度
+                corrected_feat_norm = corrected_features / (np.linalg.norm(corrected_features) + 1e-8)
+                corrected_similarities = np.dot(db_feats_norm, corrected_feat_norm)
+                
+                # 综合相似度：加权平均或取最大值
+                if use_transformer:
+                    if similarity_fusion == 'max':
+                        # 取最大值：选择更可信的相似度
+                        combined_similarities = np.maximum(original_similarities, corrected_similarities)
+                    elif similarity_fusion == 'weighted':
+                        # 加权平均：原始0.3，矫正后0.7
+                        combined_similarities = original_similarities * 0.3 + corrected_similarities * 0.7
+                    else:
+                        # 默认使用最大值
+                        combined_similarities = np.maximum(original_similarities, corrected_similarities)
+                    
+                    print(f"    [调试] 原始特征最高相似度: {original_similarities.max():.4f}")
+                    print(f"    [调试] 矫正后特征最高相似度: {corrected_similarities.max():.4f}")
+                else:
+                    # 如果没有使用Transformer，只使用原始特征
+                    combined_similarities = original_similarities
+                
+                # 找到最高综合相似度
+                best_idx = np.argmax(combined_similarities)
+                best_similarity = float(combined_similarities[best_idx])
+                original_sim = float(original_similarities[best_idx])
+                corrected_sim = float(corrected_similarities[best_idx]) if use_transformer else original_sim
                 
                 # 打印前5个最高相似度（用于调试）
-                top5_indices = np.argsort(cosine_similarities)[::-1][:5]
-                print(f"    [调试] 前5个最高相似度:")
+                top5_indices = np.argsort(combined_similarities)[::-1][:5]
+                print(f"    [调试] 前5个最高综合相似度:")
                 for rank, idx in enumerate(top5_indices, 1):
                     name = metadata_db[idx].get('person_name', 'Unknown')
-                    sim = cosine_similarities[idx]
-                    print(f"      {rank}. {name}: {sim:.4f}")
+                    sim = combined_similarities[idx]
+                    orig_sim = original_similarities[idx]
+                    corr_sim = corrected_similarities[idx] if use_transformer else orig_sim
+                    if use_transformer:
+                        print(f"      {rank}. {name}: 综合={sim:.4f} (原始={orig_sim:.4f}, 矫正={corr_sim:.4f})")
+                    else:
+                        print(f"      {rank}. {name}: {sim:.4f}")
                 
                 # 检查是否超过阈值
                 if best_similarity >= similarity_threshold:
                     matches = [{
                         'index': int(best_idx),
                         'similarity': best_similarity,
+                        'original_similarity': original_sim,
+                        'corrected_similarity': corrected_sim if use_transformer else original_sim,
                         'metadata': metadata_db[best_idx]
                     }]
+                    print(f"    ✓ 匹配成功: {metadata_db[best_idx].get('person_name', '未知')} (综合相似度: {best_similarity:.4f} >= 阈值: {similarity_threshold})")
                 else:
                     matches = []
+                    print(f"    ✗ 匹配失败: 最高综合相似度 {best_similarity:.4f} < 阈值 {similarity_threshold}")
             else:
                 matches = []
             
@@ -619,6 +668,11 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
                 matched_names.append(name)
                 matched_probs.append(similarity)
                 
+                # 计算检测框大小（用于调试）
+                box_width = x2 - x1
+                box_height = y2 - y1
+                box_area = box_width * box_height
+                
                 results.append({
                     'box': [x1, y1, x2, y2],
                     'prob': prob,
@@ -627,9 +681,11 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
                     'match': best_match,
                     'landmarks': landmarks,
                     'angles': angles,
-                    'avg_angle': avg_angle
+                    'avg_angle': avg_angle,
+                    'box_area': box_area  # 添加检测框面积用于调试
                 })
-                print(f"    匹配: {name} (余弦相似度: {similarity:.4f})")
+                angle_info = f", 角度: {avg_angle:+.2f}°" if avg_angle is not None else ""
+                print(f"    匹配: {name} (相似度: {similarity:.4f}, 框大小: {box_width}x{box_height}={box_area}{angle_info})")
             else:
                 matched_names.append('未识别')
                 matched_probs.append(0.0)
@@ -669,11 +725,36 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
     print(f"  [调试] 去重前: 检测到 {len(results)} 个人脸")
     recognized_before = sum(1 for r in results if r.get('name', '未识别') not in {'未识别', '检测失败', '数据库为空', '维度不匹配', '图像无效', '图像太小'})
     print(f"  [调试] 去重前: 成功识别 {recognized_before} 个人脸")
+    
+    # 打印去重前的详细信息
+    print(f"\n  [调试] 去重前详细信息:")
+    for i, r in enumerate(results):
+        name = r.get('name', '未识别')
+        if name not in {'未识别', '检测失败', '数据库为空', '维度不匹配', '图像无效', '图像太小'}:
+            box = r.get('box', [0, 0, 0, 0])
+            box_area = r.get('box_area', (box[2]-box[0])*(box[3]-box[1]))
+            similarity = r.get('similarity', 0.0)
+            avg_angle = r.get('avg_angle')
+            angle_str = f", 角度: {avg_angle:+.2f}°" if avg_angle is not None else ""
+            print(f"    框 {i}: {name} - 相似度: {similarity:.4f}, 框大小: {box_area}{angle_str}")
+    
     processed_results = deduplicate_recognition_results(results, confidence_key='similarity')
     recognized_after = sum(1 for r in processed_results if r.get('name', '未识别') not in {'未识别', '检测失败', '数据库为空', '维度不匹配', '图像无效', '图像太小'})
-    print(f"  [调试] 去重后: 成功识别 {recognized_after} 个人脸")
+    print(f"\n  [调试] 去重后: 成功识别 {recognized_after} 个人脸")
     unique_names_after = set(r.get('name', '未识别') for r in processed_results if r.get('name', '未识别') not in {'未识别', '检测失败', '数据库为空', '维度不匹配', '图像无效', '图像太小'})
     print(f"  [调试] 去重后: 识别出的人员: {sorted(unique_names_after)}")
+    
+    # 打印去重后的详细信息
+    print(f"\n  [调试] 去重后详细信息:")
+    for i, r in enumerate(processed_results):
+        name = r.get('name', '未识别')
+        box = r.get('box', [0, 0, 0, 0])
+        box_area = r.get('box_area', (box[2]-box[0])*(box[3]-box[1]))
+        similarity = r.get('similarity', 0.0)
+        avg_angle = r.get('avg_angle')
+        angle_str = f", 角度: {avg_angle:+.2f}°" if avg_angle is not None else ""
+        status = "✓" if name not in {'未识别', '检测失败', '数据库为空', '维度不匹配', '图像无效', '图像太小'} else "✗"
+        print(f"    {status} 框 {i}: {name} - 相似度: {similarity:.4f}, 框大小: {box_area}{angle_str}")
     
     # 更新 matched_names 和 matched_probs
     matched_names = [r['name'] for r in processed_results]
@@ -705,6 +786,303 @@ def process_video_frame(video_path, features_dir='features', output_path=None, s
     return annotated_image, results
 
 
+def process_video_segment(video_path, features_dir='features', output_path=None, similarity_threshold=0.25, 
+                         reference_image_path=None, use_cpu=False, start_frame=0, duration_seconds=5,
+                         transformer_model_path=None, similarity_fusion='max'):
+    """
+    处理视频片段：检测人脸、比对特征、标注结果，并保存为视频
+    
+    Args:
+        video_path: 视频文件路径
+        features_dir: 特征存储目录
+        output_path: 输出视频路径，如果为None则自动生成
+        similarity_threshold: 相似度阈值（默认0.25）
+        reference_image_path: 参考图像路径（用于计算角度，可选）
+        use_cpu: 是否使用 CPU
+        start_frame: 起始帧号（从0开始，默认0）
+        duration_seconds: 处理时长（秒，默认5秒）
+        transformer_model_path: Transformer模型路径（用于特征矫正，可选）
+        
+    Returns:
+        output_path: 输出视频路径
+    """
+    print("=" * 70)
+    print(f"处理视频片段：从第 {start_frame} 帧开始，持续 {duration_seconds} 秒")
+    print("=" * 70)
+    
+    # 检查视频文件
+    if not os.path.exists(video_path):
+        print(f"错误: 视频文件不存在: {video_path}")
+        return None
+    
+    print(f"视频路径: {video_path}")
+    
+    # 打开视频
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("错误: 无法打开视频文件")
+        return None
+    
+    # 获取视频信息
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    print(f"\n视频信息:")
+    print(f"  帧率: {fps:.2f} fps")
+    print(f"  总帧数: {total_frames}")
+    print(f"  分辨率: {width}x{height}")
+    
+    # 计算要处理的帧数
+    frames_to_process = int(fps * duration_seconds)
+    end_frame = min(start_frame + frames_to_process, total_frames)
+    actual_duration = (end_frame - start_frame) / fps if fps > 0 else 0
+    
+    print(f"\n处理范围:")
+    print(f"  起始帧: {start_frame}")
+    print(f"  结束帧: {end_frame}")
+    print(f"  处理帧数: {end_frame - start_frame}")
+    print(f"  实际时长: {actual_duration:.2f} 秒")
+    
+    # 跳转到起始帧
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+    
+    # 初始化组件（只初始化一次，提高效率）
+    print("\n正在初始化组件...")
+    device = torch.device('cuda' if torch.cuda.is_available() and not use_cpu else 'cpu')
+    print(f"  使用设备: {device}")
+    
+    # DINOv2 特征提取器
+    print("  初始化 DINOv2 特征提取器...")
+    feature_extractor = DINOv2FeatureExtractor(model_name='dinov2_vitb14', device=device)
+    
+    # Transformer模型
+    transformer_model = None
+    if transformer_model_path and Path(transformer_model_path).exists():
+        print("  加载Transformer模型...")
+        try:
+            transformer_model, _ = load_transformer_model(transformer_model_path, device=device)
+            print("  ✓ Transformer模型已加载")
+        except Exception as e:
+            print(f"  ⚠️ Transformer模型加载失败: {e}")
+    else:
+        if transformer_model_path:
+            print(f"  ⚠️ Transformer模型文件不存在: {transformer_model_path}")
+    
+    # 特征数据库
+    print("  加载特征数据库...")
+    feature_manager = FeatureManager(storage_dir=features_dir)
+    feature_count = feature_manager.get_count()
+    print(f"  ✓ 已加载 {feature_count} 个特征")
+    
+    # InsightFace 检测器
+    print("  初始化 InsightFace 检测器...")
+    insightface_detector = get_insightface_detector(use_cpu=use_cpu)
+    
+    # 参考图像和关键点
+    reference_landmarks_3d = None
+    reference_landmarks_2d = None
+    reference_box = None
+    reference_img_size = None
+    if reference_image_path and os.path.exists(reference_image_path):
+        print(f"  加载参考图像: {reference_image_path}")
+        ref_landmarks, ref_box = get_insightface_landmarks(insightface_detector, reference_image_path)
+        if ref_landmarks is not None:
+            ref_img = Image.open(reference_image_path)
+            ref_width, ref_height = ref_img.size
+            reference_landmarks_3d = landmarks_to_3d(ref_landmarks, ref_box, ref_width, ref_height)
+            reference_landmarks_2d = ref_landmarks
+            reference_box = ref_box
+            reference_img_size = (ref_width, ref_height)
+            print("  ✓ 参考关键点加载成功")
+        else:
+            print("  ⚠️ 参考图像中未检测到人脸")
+    
+    # 创建视频写入器
+    if output_path is None:
+        video_name = Path(video_path).stem
+        output_path = f'video_segment_{video_name}_frame{start_frame}_{duration_seconds}s.mp4'
+    
+    print(f"\n输出视频路径: {output_path}")
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    
+    if not out.isOpened():
+        print(f"错误: 无法创建输出视频文件: {output_path}")
+        cap.release()
+        return None
+    
+    # 处理每一帧
+    print(f"\n开始处理 {end_frame - start_frame} 帧...")
+    frame_count = 0
+    
+    for frame_idx in range(start_frame, end_frame):
+        ret, frame = cap.read()
+        if not ret:
+            print(f"  警告: 无法读取第 {frame_idx} 帧，停止处理")
+            break
+        
+        frame_count += 1
+        if frame_count % 10 == 0:
+            print(f"  处理进度: {frame_count}/{end_frame - start_frame} 帧 ({frame_count/(end_frame-start_frame)*100:.1f}%)")
+        
+        # 转换为PIL Image
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(frame_rgb)
+        
+        # 检测人脸
+        img_array = np.array(pil_image.convert('RGB'))
+        img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+        detected_faces = insightface_detector.get(img_bgr)
+        
+        if len(detected_faces) == 0:
+            # 没有检测到人脸，直接写入原帧
+            out.write(frame)
+            continue
+        
+        # 处理每个人脸
+        results = []
+        for face_info in detected_faces:
+            box = face_info.bbox
+            x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+            
+            # 裁剪人脸区域
+            img_width, img_height = pil_image.size
+            x1 = max(0, min(x1, img_width - 1))
+            y1 = max(0, min(y1, img_height - 1))
+            x2 = max(0, min(x2, img_width - 1))
+            y2 = max(0, min(y2, img_height - 1))
+            
+            face_crop = pil_image.crop((x1, y1, x2, y2))
+            
+            try:
+                # 提取原始特征
+                original_features = feature_extractor.extract_features(face_crop)
+                corrected_features = original_features.copy()
+                use_transformer = False
+                
+                # Transformer矫正特征
+                if transformer_model is not None and reference_landmarks_3d is not None:
+                    if hasattr(face_info, 'kps') and face_info.kps is not None:
+                        video_landmarks = face_info.kps
+                        video_width = x2 - x1
+                        video_height = y2 - y1
+                        video_landmarks_3d = landmarks_to_3d(video_landmarks, box, video_width, video_height)
+                        angles, _ = calculate_spherical_angle(
+                            reference_landmarks_3d, video_landmarks_3d,
+                            reference_landmarks_2d, video_landmarks
+                        )
+                        corrected_features = correct_features_with_transformer(
+                            transformer_model, original_features, angles, device=device
+                        )
+                        use_transformer = True
+                
+                # 比对特征：使用原始特征和矫正后特征的融合相似度
+                landmarks = face_info.kps if hasattr(face_info, 'kps') and face_info.kps is not None else None
+                angles = None
+                avg_angle = None
+                
+                if reference_landmarks_3d is not None and landmarks is not None:
+                    landmarks_3d = landmarks_to_3d(landmarks, box, img_width, img_height)
+                    angles, avg_angle = calculate_spherical_angle(
+                        reference_landmarks_3d, landmarks_3d,
+                        reference_landmarks_2d, landmarks
+                    )
+                
+                prob = face_info.det_score if hasattr(face_info, 'det_score') else 1.0
+                name = '未识别'
+                similarity = 0.0
+                match = None
+                
+                if feature_count > 0:
+                    features_db, metadata_db = feature_manager.get_all_features()
+                    if features_db is not None and len(features_db) > 0:
+                        # 计算原始特征的相似度
+                        original_feat_norm = original_features / (np.linalg.norm(original_features) + 1e-8)
+                        db_feats_norm = features_db / (np.linalg.norm(features_db, axis=1, keepdims=True) + 1e-8)
+                        original_similarities = np.dot(db_feats_norm, original_feat_norm)
+                        
+                        # 计算矫正后特征的相似度
+                        corrected_feat_norm = corrected_features / (np.linalg.norm(corrected_features) + 1e-8)
+                        corrected_similarities = np.dot(db_feats_norm, corrected_feat_norm)
+                        
+                        # 融合相似度
+                        if use_transformer:
+                            if similarity_fusion == 'max':
+                                combined_similarities = np.maximum(original_similarities, corrected_similarities)
+                            elif similarity_fusion == 'weighted':
+                                combined_similarities = original_similarities * 0.3 + corrected_similarities * 0.7
+                            else:
+                                combined_similarities = np.maximum(original_similarities, corrected_similarities)
+                        else:
+                            combined_similarities = original_similarities
+                        
+                        best_idx = np.argmax(combined_similarities)
+                        best_similarity = float(combined_similarities[best_idx])
+                        original_sim = float(original_similarities[best_idx])
+                        corrected_sim = float(corrected_similarities[best_idx]) if use_transformer else original_sim
+                        
+                        if best_similarity >= similarity_threshold:
+                            name = metadata_db[best_idx].get('person_name', '未知')
+                            similarity = best_similarity
+                            match = {
+                                'index': int(best_idx),
+                                'similarity': best_similarity,
+                                'original_similarity': original_sim,
+                                'corrected_similarity': corrected_sim,
+                                'metadata': metadata_db[best_idx]
+                            }
+                
+                # 计算检测框大小
+                box_width = x2 - x1
+                box_height = y2 - y1
+                box_area = box_width * box_height
+                
+                results.append({
+                    'box': [x1, y1, x2, y2],
+                    'prob': prob,
+                    'name': name,
+                    'similarity': similarity,
+                    'match': match,
+                    'landmarks': landmarks,
+                    'angles': angles,
+                    'avg_angle': avg_angle,
+                    'box_area': box_area  # 添加检测框面积用于去重
+                })
+            except Exception as e:
+                # 处理失败，跳过这个人脸
+                continue
+        
+        # 去重处理
+        processed_results = deduplicate_recognition_results(results, confidence_key='similarity')
+        
+        # 绘制结果
+        annotated_image = draw_recognition_results(
+            pil_image,
+            processed_results,
+            show_landmarks=True,
+            show_angles=True
+        )
+        
+        # 转换为BGR格式并写入视频
+        annotated_array = np.array(annotated_image)
+        annotated_bgr = cv2.cvtColor(annotated_array, cv2.COLOR_RGB2BGR)
+        out.write(annotated_bgr)
+    
+    # 释放资源
+    cap.release()
+    out.release()
+    
+    print(f"\n" + "=" * 70)
+    print(f"处理完成！")
+    print(f"  处理帧数: {frame_count}")
+    print(f"  输出视频: {output_path}")
+    print("=" * 70)
+    
+    return output_path
+
+
 def main():
     """主函数"""
     # 视频路径
@@ -714,8 +1092,8 @@ def main():
     # 特征存储目录
     features_dir = 'features_224'
     
-    # 输出路径
-    output_path = 'video_frame_result224_t.jpg'
+    # 输出路径（视频文件）
+    output_path = 'video_segment_result224_t.mp4'
     
     # 相似度阈值设置（使用0.25）
     similarity_threshold = 0.25
@@ -726,37 +1104,33 @@ def main():
     # Transformer模型路径（用于特征矫正）
     transformer_model_path = 'train_transformer/checkpoints/best_model.pth'  # 可以修改为其他检查点
     
-    # 要处理的帧号（从0开始，0表示第一帧）
-    frame_number = 120  # 可以修改这个值来处理不同的帧
+    # 起始帧号（从0开始，0表示第一帧）
+    start_frame = 120  # 可以修改这个值来处理不同的起始位置
     
-    # 处理视频指定帧
-    annotated_image, results = process_video_frame(
+    # 处理时长（秒）
+    duration_seconds = 2  # 处理5秒视频
+    
+    # 相似度融合方式：'max'（取最大值）或 'weighted'（加权平均，原始0.3+矫正0.7）
+    similarity_fusion = 'max'  # 默认使用最大值，选择更可信的相似度
+    
+    # 处理视频片段
+    output_video_path = process_video_segment(
         video_path=video_path,
         features_dir=features_dir,
         output_path=output_path,
         similarity_threshold=similarity_threshold,
         reference_image_path=reference_image_path,
         use_cpu=False,
-        frame_number=frame_number,
-        transformer_model_path=transformer_model_path
+        start_frame=start_frame,
+        duration_seconds=duration_seconds,
+        transformer_model_path=transformer_model_path,
+        similarity_fusion=similarity_fusion
     )
     
-    if annotated_image is not None:
-        print(f"\n检测到 {len(results)} 个人脸")
-        for i, result in enumerate(results, 1):
-            print(f"\n人脸 {i}:")
-            print(f"  位置: {result['box']}")
-            print(f"  人脸检测置信度: {result['prob']:.4f} (InsightFace检测)")
-            print(f"  姓名: {result['name']}")
-            if result['match']:
-                print(f"  特征比对相似度: {result['similarity']:.4f} (与特征库的余弦相似度)")
-            elif result['name'] == '未识别':
-                print(f"  特征比对相似度: {result.get('similarity', 0.0):.4f} (低于阈值 {similarity_threshold})")
-            if result.get('avg_angle') is not None:
-                direction = "抬头" if result['avg_angle'] > 0 else "低头" if result['avg_angle'] < 0 else "平视"
-                print(f"  平均角度: {result['avg_angle']:+.2f}° ({direction})")
+    if output_video_path:
+        print(f"\n✓ 视频已保存到: {output_video_path}")
     else:
-        print("处理失败")
+        print("\n✗ 处理失败")
 
 
 if __name__ == '__main__':

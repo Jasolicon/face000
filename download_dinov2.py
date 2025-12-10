@@ -184,18 +184,19 @@ def download_all_models(save_dir=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='下载 DINOv2 模型')
-    parser.add_argument('--model', type=str, default=None,
+    parser.add_argument('--model', type=str, default='dinov2_vits14',
                        choices=['dinov2_vits14', 'dinov2_vitb14', 'dinov2_vitl14', 'dinov2_vitg14'],
-                       help='要下载的模型名称（默认: 下载小模型和768维模型）')
+                       help='要下载的模型名称（默认: dinov2_vits14 小模型，384维）')
     parser.add_argument('--save_dir', type=str, default=None,
                        help='保存模型的目录（如果指定，模型会保存到该目录）')
     parser.add_argument('--all', action='store_true',
-                       help='下载小模型和768维模型（默认行为）')
+                       help='下载小模型和768维模型（dinov2_vits14 和 dinov2_vitb14）')
     args = parser.parse_args()
     
-    # 如果没有指定模型，默认下载小模型和768维模型
-    if args.model is None or args.all:
+    # 如果指定了 --all，下载所有常用模型
+    if args.all:
         download_all_models(save_dir=args.save_dir)
     else:
+        # 默认下载小模型（dinov2_vits14）
         download_dinov2(args.model, save_dir=args.save_dir)
 
