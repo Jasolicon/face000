@@ -3,13 +3,18 @@
 使用 DINOv2 提取特征，与 features 目录中的特征对比（阈值0.25）
 在图片上标注关键点和角度
 """
+import os
+
+# 在导入任何可能使用 HuggingFace 的库之前设置镜像
+if 'HF_ENDPOINT' not in os.environ:
+    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
 import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from PIL import Image, ImageDraw, ImageFont
-import os
 from pathlib import Path
 import timm
 from feature_manager import FeatureManager
@@ -141,7 +146,7 @@ class DINOv2FeatureExtractor:
 
 def get_chinese_font(font_size=20):
     """
-    获取中文字体
+    获取中文字体（支持跨平台）
     
     Args:
         font_size: 字体大小
@@ -149,26 +154,31 @@ def get_chinese_font(font_size=20):
     Returns:
         font: PIL字体对象
     """
-    # 尝试使用系统字体
-    font_paths = [
-        'C:/Windows/Fonts/msyh.ttc',  # 微软雅黑
-        'C:/Windows/Fonts/simhei.ttf',  # 黑体
-        'C:/Windows/Fonts/simsun.ttc',  # 宋体
-        'C:/Windows/Fonts/msyhbd.ttc',  # 微软雅黑 Bold
-    ]
-    
-    for font_path in font_paths:
-        if os.path.exists(font_path):
-            try:
-                return ImageFont.truetype(font_path, font_size)
-            except:
-                continue
-    
-    # 如果找不到字体，使用默认字体（可能不支持中文）
     try:
-        return ImageFont.truetype("arial.ttf", font_size)
-    except:
-        return ImageFont.load_default()
+        from font_utils import get_chinese_font_pil
+        return get_chinese_font_pil(font_size)
+    except ImportError:
+        # 如果 font_utils 不可用，使用旧方法
+        # 尝试使用系统字体
+        font_paths = [
+            'C:/Windows/Fonts/msyh.ttc',  # 微软雅黑
+            'C:/Windows/Fonts/simhei.ttf',  # 黑体
+            'C:/Windows/Fonts/simsun.ttc',  # 宋体
+            'C:/Windows/Fonts/msyhbd.ttc',  # 微软雅黑 Bold
+        ]
+        
+        for font_path in font_paths:
+            if os.path.exists(font_path):
+                try:
+                    return ImageFont.truetype(font_path, font_size)
+                except:
+                    continue
+        
+        # 如果找不到字体，使用默认字体（可能不支持中文）
+        try:
+            return ImageFont.truetype("arial.ttf", font_size)
+        except:
+            return ImageFont.load_default()
 
 
 def draw_boxes_with_names(image, boxes, names, probs=None):

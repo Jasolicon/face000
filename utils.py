@@ -9,6 +9,7 @@ from insightface.app import FaceAnalysis
 import math
 import logging
 import warnings
+import os
 
 # 设置日志级别为 ERROR，以屏蔽不必要的输出
 logging.getLogger('insightface').setLevel(logging.ERROR)
@@ -19,28 +20,83 @@ warnings.filterwarnings('ignore', category=FutureWarning, message='.*rcond.*')
 # 全局检测器（单例模式，避免重复初始化）
 _insightface_detector = None
 
-def get_insightface_detector(use_cpu=False):
+def get_insightface_detector(use_cpu=False, max_retries=3, retry_delay=5):
     """
     获取 InsightFace 检测器（单例模式）
+    支持下载重试机制
     
     Args:
         use_cpu: 是否使用 CPU
+        max_retries: 最大重试次数（用于模型下载）
+        retry_delay: 重试延迟（秒）
         
     Returns:
         detector: FaceAnalysis 检测器
     """
     global _insightface_detector
     if _insightface_detector is None:
-        detector = FaceAnalysis(name='buffalo_l')
+        import time
+        import sys
+        
+        # 设置模型下载镜像（在加载模型前）
         try:
-            if use_cpu:
-                detector.prepare(ctx_id=-1, det_size=(640, 640))
-            else:
-                detector.prepare(ctx_id=0, det_size=(640, 640))
-        except Exception as e:
-            print(f"GPU 初始化失败，使用 CPU: {e}")
-            detector.prepare(ctx_id=-1, det_size=(640, 640))
-        _insightface_detector = detector
+            from model_utils import setup_model_mirrors
+            setup_model_mirrors()
+        except ImportError:
+            # 如果 model_utils 不可用，直接设置环境变量
+            if 'HF_ENDPOINT' not in os.environ:
+                os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+        
+        # 尝试下载模型，支持重试
+        for attempt in range(max_retries):
+            try:
+                print(f"正在初始化 InsightFace 检测器（尝试 {attempt + 1}/{max_retries}）...")
+                detector = FaceAnalysis(name='buffalo_l')
+                
+                # 准备检测器
+                if use_cpu:
+                    detector.prepare(ctx_id=-1, det_size=(640, 640))
+                else:
+                    try:
+                        detector.prepare(ctx_id=0, det_size=(640, 640))
+                    except Exception as e:
+                        print(f"GPU 初始化失败，使用 CPU: {e}")
+                        detector.prepare(ctx_id=-1, det_size=(640, 640))
+                
+                _insightface_detector = detector
+                print("✓ InsightFace 检测器初始化成功")
+                return _insightface_detector
+                
+            except Exception as e:
+                error_msg = str(e)
+                # 检查是否是下载相关的错误
+                is_download_error = any(keyword in error_msg.lower() for keyword in [
+                    'incompleteread', 'connection broken', 'chunkedencoding', 
+                    'connection error', 'timeout', 'download'
+                ])
+                
+                if is_download_error and attempt < max_retries - 1:
+                    print(f"⚠️  模型下载失败（尝试 {attempt + 1}/{max_retries}）: {error_msg[:100]}")
+                    print(f"   等待 {retry_delay} 秒后重试...")
+                    time.sleep(retry_delay)
+                    # 增加重试延迟（指数退避）
+                    retry_delay *= 2
+                    continue
+                else:
+                    # 如果是最后一次尝试或非下载错误，抛出异常
+                    print(f"\n❌ InsightFace 检测器初始化失败: {error_msg}")
+                    if is_download_error:
+                        print("\n提示:")
+                        print("1. 检查网络连接是否稳定")
+                        print("2. 可以尝试手动下载模型:")
+                        print("   - 模型位置: ~/.insightface/models/buffalo_l/")
+                        print("   - 或设置环境变量: export INSIGHTFACE_ROOT=/path/to/models")
+                        print("3. 如果网络不稳定，可以:")
+                        print("   - 使用代理")
+                        print("   - 多次运行脚本（支持断点续传）")
+                        print("   - 手动下载模型文件到指定目录")
+                    raise
+    
     return _insightface_detector
 
 def get_insightface_landmarks(detector, image_path):
@@ -275,14 +331,19 @@ def draw_landmarks_on_image(image, landmarks, box, angles=None, avg_angle=None,
     draw_image = image.copy()
     draw = ImageDraw.Draw(draw_image)
     
-    # 尝试加载中文字体
+    # 尝试加载中文字体（支持跨平台）
     try:
-        font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 20)  # 黑体
-    except:
+        from font_utils import get_chinese_font_pil
+        font = get_chinese_font_pil(20)
+    except ImportError:
+        # 如果 font_utils 不可用，使用旧方法
         try:
-            font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 20)  # 微软雅黑
+            font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 20)  # 黑体
         except:
-            font = ImageFont.load_default()  # 默认字体（可能不支持中文）
+            try:
+                font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 20)  # 微软雅黑
+            except:
+                font = ImageFont.load_default()  # 默认字体（可能不支持中文）
     
     # 默认关键点名称和颜色
     if landmark_names is None:
@@ -414,17 +475,23 @@ def draw_recognition_results(image, results, show_landmarks=True, show_angles=Tr
     draw_image = image.copy()
     draw = ImageDraw.Draw(draw_image)
     
-    # 尝试加载中文字体
+    # 尝试加载中文字体（支持跨平台）
     try:
-        font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 24)  # 黑体
-        small_font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 16)
-    except:
+        from font_utils import get_chinese_font_pil
+        font = get_chinese_font_pil(24)
+        small_font = get_chinese_font_pil(16)
+    except ImportError:
+        # 如果 font_utils 不可用，使用旧方法
         try:
-            font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 24)  # 微软雅黑
-            small_font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 16)
+            font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 24)  # 黑体
+            small_font = ImageFont.truetype("C:/Windows/Fonts/simhei.ttf", 16)
         except:
-            font = ImageFont.load_default()
-            small_font = ImageFont.load_default()
+            try:
+                font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 24)  # 微软雅黑
+                small_font = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 16)
+            except:
+                font = ImageFont.load_default()
+                small_font = ImageFont.load_default()
     
     # 准备绘制数据
     boxes = []

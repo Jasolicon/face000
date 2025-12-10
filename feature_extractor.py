@@ -1,6 +1,29 @@
 """
 图像特征提取模块 - 使用 DINO
 """
+# 在导入任何可能使用 HuggingFace 的库之前设置镜像
+import os
+import sys
+from pathlib import Path
+
+# 设置镜像环境变量（必须在导入 timm 之前）
+if 'HF_ENDPOINT' not in os.environ:
+    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+    os.environ['HF_HUB_ENABLE_HF_TRANSFER'] = '0'  # 禁用 hf_transfer
+    os.environ['HF_HUB_DOWNLOAD_TIMEOUT'] = '300'  # 5分钟超时
+    os.environ['HF_HUB_DOWNLOAD_RETRIES'] = '5'    # 重试5次
+
+# 尝试导入 setup_mirrors（如果存在）
+try:
+    # 添加项目根目录到路径
+    project_root = Path(__file__).parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    from setup_mirrors import setup_all_mirrors
+    setup_all_mirrors()
+except ImportError:
+    pass  # 如果 setup_mirrors 不存在，使用上面的默认设置
+
 import torch
 import torch.nn as nn
 from PIL import Image
@@ -108,12 +131,12 @@ class DINOFeatureExtractor:
 class DINOv2FeatureExtractor:
     """使用 DINOv2 提取图像特征"""
     
-    def __init__(self, model_name='dinov2_vitb14', device=None, resize_to_96=True):
+    def __init__(self, model_name='dinov2_vits14', device=None, resize_to_96=True):
         """
         初始化 DINOv2 特征提取器
         
         Args:
-            model_name: DINOv2 模型名称
+            model_name: DINOv2 模型名称 ('dinov2_vits14' 小模型, 'dinov2_vitb14' 中等模型)
             device: 计算设备 ('cuda' 或 'cpu')，如果为None则自动选择
             resize_to_96: 是否在提取特征前先缩放到 96*96
         """
@@ -123,22 +146,35 @@ class DINOv2FeatureExtractor:
             self.device = torch.device(device)
         
         self.resize_to_96 = resize_to_96
+        self.model_name = model_name
         
-        # 默认使用 DINOv2 ViT-B/14，如果失败则使用 vit_base_patch16_224 作为备用
+        # 设置模型下载镜像（在加载模型前）
+        try:
+            from model_utils import setup_model_mirrors
+            setup_model_mirrors()
+        except ImportError:
+            # 如果 model_utils 不可用，直接设置环境变量
+            if 'HF_ENDPOINT' not in os.environ:
+                os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+        
+        # 默认使用 DINOv2 ViT-S/14（小模型），如果失败则使用 vit_base_patch16_224 作为备用
         self.use_dinov2 = False
         
-        # 首先尝试使用 torch.hub 加载 DINOv2 ViT-B/14（默认模型）
+        # 首先尝试使用 torch.hub 加载 DINOv2 模型
         try:
-            print(f"  尝试从 torch.hub 加载 DINOv2 ViT-B/14（默认模型）...")
+            print(f"  尝试从 torch.hub 加载 DINOv2 {model_name}...")
             # 使用 torch.hub 加载 DINOv2 模型
-            self.model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14', pretrained=True)
+            self.model = torch.hub.load('facebookresearch/dinov2', model_name, pretrained=True)
             self.model.eval()
             self.model.to(self.device)
             self.use_dinov2 = True
-            print(f"  ✓ 成功加载 DINOv2 ViT-B/14 模型")
+            print(f"  ✓ 成功加载 DINOv2 {model_name} 模型")
             print(f"  模型缓存位置: ~/.cache/torch/hub/checkpoints/")
+            # 注意：小模型(dinov2_vits14)的特征维度是384，中等模型(dinov2_vitb14)是768
+            if model_name == 'dinov2_vits14':
+                print(f"  提示: 使用小模型，特征维度为384（而非768）")
         except Exception as e:
-            print(f"  ✗ 无法加载 DINOv2 ViT-B/14: {str(e)}")
+            print(f"  ✗ 无法加载 DINOv2 {model_name}: {str(e)}")
             print(f"  提示: 运行 'python download_dinov2.py' 可以提前下载模型")
             print(f"  将使用备用模型: vit_base_patch16_224")
             self.use_dinov2 = False
@@ -147,9 +183,16 @@ class DINOv2FeatureExtractor:
         if not self.use_dinov2:
             model_name_to_use = 'vit_base_patch16_224'
             print(f"  加载备用模型: {model_name_to_use}...")
+            print(f"  提示: 如果下载失败，请检查网络连接或使用镜像")
+            print(f"  当前 HF_ENDPOINT: {os.environ.get('HF_ENDPOINT', '未设置')}")
             
             try:
+                # 确保使用镜像（在调用 timm.create_model 前）
+                if 'HF_ENDPOINT' not in os.environ:
+                    os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+                
                 # timm.create_model 会自动使用缓存，如果模型已下载过，不会重新下载
+                # timm 会通过 huggingface_hub 下载，使用 HF_ENDPOINT 环境变量
                 self.model = timm.create_model(
                     model_name_to_use,
                     pretrained=True,
@@ -361,6 +404,15 @@ class ArcFaceFeatureExtractor:
             self.device = torch.device(device)
         
         self.model_name = model_name
+        
+        # 设置模型下载镜像（在加载模型前）
+        try:
+            from model_utils import setup_model_mirrors
+            setup_model_mirrors()
+        except ImportError:
+            # 如果 model_utils 不可用，直接设置环境变量
+            if 'HF_ENDPOINT' not in os.environ:
+                os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
         
         # 尝试使用insightface（推荐）
         try:
