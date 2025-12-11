@@ -98,23 +98,46 @@ class TransformerFaceDataset(Dataset):
         self.face_dir = Path(face_dir)
         self.valid_images_file = valid_images_file
         self.use_cpu = use_cpu
+        self.dinov2_model_name = dinov2_model_name
         
-        # 初始化特征提取器和检测器
-        logger.info(f"初始化DINOv2特征提取器（模型: {dinov2_model_name}）...")
-        # 尝试从指定目录加载模型（避免重复下载）
-        model_dir = os.environ.get('DINOV2_MODEL_DIR', None)
-        if model_dir:
-            logger.info(f"  使用模型目录: {model_dir}")
+        # 检查是否使用预提取特征文件（新格式）
+        use_precomputed_features = False
+        if self.valid_images_file and Path(self.valid_images_file).exists():
+            try:
+                import json
+                with open(self.valid_images_file, 'r', encoding='utf-8') as f:
+                    valid_data = json.load(f)
+                if valid_data and len(valid_data) > 0:
+                    first_person_data = list(valid_data.values())[0]
+                    if 'face_features' in first_person_data and 'video_data' in first_person_data:
+                        use_precomputed_features = True
+                        logger.info("✓ 检测到新格式数据（包含预提取特征），将跳过DINOv2和InsightFace初始化")
+            except Exception as e:
+                logger.warning(f"无法检查数据格式，将初始化DINOv2: {e}")
         
-        self.feature_extractor = DINOv2FeatureExtractor(
-            model_name=dinov2_model_name,
-            resize_to_96=False,
-            device=None if not use_cpu else 'cpu',
-            model_dir=model_dir
-        )
-        
-        logger.info("初始化InsightFace检测器...")
-        self.detector = get_insightface_detector(use_cpu=use_cpu)
+        # 只有在不使用预提取特征时才初始化DINOv2和InsightFace
+        if not use_precomputed_features:
+            # 初始化特征提取器和检测器
+            logger.info(f"初始化DINOv2特征提取器（模型: {dinov2_model_name}）...")
+            # 尝试从指定目录加载模型（避免重复下载）
+            model_dir = os.environ.get('DINOV2_MODEL_DIR', None)
+            if model_dir:
+                logger.info(f"  使用模型目录: {model_dir}")
+            
+            self.feature_extractor = DINOv2FeatureExtractor(
+                model_name=dinov2_model_name,
+                resize_to_96=False,
+                device=None if not use_cpu else 'cpu',
+                model_dir=model_dir
+            )
+            
+            logger.info("初始化InsightFace检测器...")
+            self.detector = get_insightface_detector(use_cpu=use_cpu)
+        else:
+            # 使用预提取特征，不需要初始化
+            self.feature_extractor = None
+            self.detector = None
+            logger.info("✓ 跳过DINOv2和InsightFace初始化（使用预提取特征）")
         
         # 加载features_224特征库
         logger.info(f"加载特征库: {self.features_224_dir}")
@@ -137,7 +160,10 @@ class TransformerFaceDataset(Dataset):
             else:
                 # 如果features_224不可用，使用默认值（根据模型类型）
                 # dinov2_vits14是384，dinov2_vitb14是768，dinov2_vitl14是1024，dinov2_vitg14是1536
-                model_name = getattr(self.feature_extractor, 'model_name', dinov2_model_name)
+                if self.feature_extractor is not None:
+                    model_name = getattr(self.feature_extractor, 'model_name', dinov2_model_name)
+                else:
+                    model_name = dinov2_model_name
                 feature_dims = {
                     'dinov2_vits14': 384,
                     'dinov2_vitb14': 768,
@@ -513,6 +539,9 @@ class TransformerFaceDataset(Dataset):
         Returns:
             features: DINOv2特征向量 (384维或768维，取决于模型)
         """
+        if self.feature_extractor is None:
+            raise RuntimeError("DINOv2特征提取器未初始化。请确保不使用预提取特征文件，或重新运行 filter_valid_images.py")
+        
         # 检查缓存
         if self.cache_features and image_path in self.feature_cache:
             return self.feature_cache[image_path]
@@ -535,6 +564,8 @@ class TransformerFaceDataset(Dataset):
         """
         计算视频帧图片与正面图片的球面角
         
+        注意：如果使用预提取特征，此方法不会被调用
+        
         Args:
             video_image_path: 视频帧图片路径
             face_image_path: 正面图片路径
@@ -544,6 +575,9 @@ class TransformerFaceDataset(Dataset):
             angles: 5个关键点的球面角 (5维)
             avg_angle: 平均角度（可选）
         """
+        if self.detector is None:
+            raise RuntimeError("InsightFace检测器未初始化。请确保不使用预提取特征文件，或重新运行 filter_valid_images.py")
+        
         # 检测正面图片的关键点
         face_landmarks, face_box = get_insightface_landmarks(self.detector, face_image_path)
         if face_landmarks is None or face_box is None:

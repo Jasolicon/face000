@@ -45,6 +45,10 @@ sys.path.append(str(Path(__file__).parent.parent))
 from train_transformer.dataset import TransformerFaceDataset, create_dataloader
 from train_transformer.models import SimpleTransformerEncoder
 from train_transformer.models_lightweight import AngleConditionedMLP, ResidualMLP, LightweightTransformer
+try:
+    from train_transformer.models_decoder_only import TransformerDecoderOnly
+except ImportError:
+    TransformerDecoderOnly = None
 from train_transformer.losses import CosineSimilarityLoss, MSELoss, CombinedLoss, ResidualAndFinalLoss
 from train_transformer.utils_seed import set_seed, set_deterministic_mode
 
@@ -435,7 +439,7 @@ def plot_training_curves(train_losses, val_losses, train_cosine_losses=None,
     plt.close()
 
 
-def save_checkpoint(model, optimizer, epoch, loss, save_path, best=False, max_retries=3):
+def save_checkpoint(model, optimizer, epoch, loss, save_path, best=False, max_retries=3, model_type=None):
     """
     保存模型检查点（带错误处理和重试机制）
     
@@ -469,7 +473,8 @@ def save_checkpoint(model, optimizer, epoch, loss, save_path, best=False, max_re
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'loss': loss,
-        'best': best
+        'best': best,
+        'model_type': model_type  # 保存模型类型信息
     }
     
     # 先保存到临时文件，然后重命名（原子操作）
@@ -590,8 +595,8 @@ def main():
     parser.add_argument('--dropout', type=float, default=0.15,
                        help='Dropout比率（推荐0.15，防止过拟合）')
     parser.add_argument('--model_type', type=str, default='lightweight_transformer',
-                       choices=['transformer', 'lightweight_transformer', 'mlp', 'residual_mlp'],
-                       help='模型类型：transformer(标准), lightweight_transformer(轻量级Transformer), mlp(MLP), residual_mlp(残差MLP)')
+                       choices=['transformer', 'lightweight_transformer', 'decoder_only', 'mlp', 'residual_mlp'],
+                       help='模型类型：transformer(标准编码器), lightweight_transformer(轻量级编码器), decoder_only(仅解码器), mlp(MLP), residual_mlp(残差MLP)')
     parser.add_argument('--hidden_dims', type=int, nargs='+', default=None,
                        help='MLP隐藏层维度列表（仅用于mlp类型，如果为None将根据d_model自动设置）')
     parser.add_argument('--hidden_dim', type=int, default=512,
@@ -837,6 +842,20 @@ def main():
             angle_dim=5,
             dropout=args.dropout
         ).to(device)
+    elif args.model_type == 'decoder_only':
+        # 仅解码器模型
+        if TransformerDecoderOnly is None:
+            raise ImportError("无法导入 TransformerDecoderOnly，请确保 models_decoder_only.py 存在")
+        model = TransformerDecoderOnly(
+            d_model=args.d_model,
+            nhead=args.nhead,
+            num_layers=args.num_layers,
+            dim_feedforward=args.dim_feedforward,
+            dropout=args.dropout,
+            use_angle_pe=True,
+            use_angle_conditioning=True,
+            angle_dim=5
+        ).to(device)
     else:
         raise ValueError(f"未知的模型类型: {args.model_type}")
     
@@ -1038,8 +1057,10 @@ def main():
         if val_metrics['loss'] < best_val_loss:
             best_val_loss = val_metrics['loss']
             try:
-                best_model_path = save_dir / 'best_model.pth'
-                if save_checkpoint(model, optimizer, epoch, val_metrics['loss'], best_model_path, best=True):
+                # 文件名包含模型类型标注
+                model_type_suffix = args.model_type.replace('_', '-')  # decoder_only -> decoder-only
+                best_model_path = save_dir / f'best_model_{model_type_suffix}.pth'
+                if save_checkpoint(model, optimizer, epoch, val_metrics['loss'], best_model_path, best=True, model_type=args.model_type):
                     print(f"✓ 保存最佳模型 (验证损失: {best_val_loss:.6f}, Epoch {epoch+1})")
             except Exception as e:
                 print(f"❌ 保存最佳模型失败: {e}")
@@ -1047,7 +1068,8 @@ def main():
         
         # 每10个epoch保存一次训练曲线
         if (epoch + 1) % 10 == 0:
-            plot_path = log_dir / f'training_curves_epoch_{epoch+1}.png'
+            model_type_suffix = args.model_type.replace('_', '-')
+            plot_path = log_dir / f'training_curves_{model_type_suffix}_epoch_{epoch+1}.png'
             plot_training_curves(
                 train_losses, val_losses,
                 train_cosine_losses if len(train_cosine_losses) > 0 else None,
@@ -1058,8 +1080,9 @@ def main():
                 save_path=str(plot_path)
             )
     
-    # 保存最终训练曲线
-    final_plot_path = log_dir / 'training_curves_final.png'
+    # 保存最终训练曲线（包含模型类型标注）
+    model_type_suffix = args.model_type.replace('_', '-')
+    final_plot_path = log_dir / f'training_curves_{model_type_suffix}_final.png'
     plot_training_curves(
         train_losses, val_losses,
         train_cosine_losses if len(train_cosine_losses) > 0 else None,
