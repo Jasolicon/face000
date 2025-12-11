@@ -50,6 +50,10 @@ try:
 except ImportError:
     TransformerDecoderOnly = None
 from train_transformer.losses import CosineSimilarityLoss, MSELoss, CombinedLoss, ResidualAndFinalLoss
+try:
+    from train_transformer.angle_aware_loss import AngleAwareTripletLoss
+except ImportError:
+    AngleAwareTripletLoss = None
 from train_transformer.utils_seed import set_seed, set_deterministic_mode
 
 # 配置matplotlib中文字体
@@ -158,6 +162,32 @@ def train_epoch(model, dataloader, criterion, optimizer, device, epoch,
                     cosine_loss = loss_dict['cosine_loss'].item()
                     mse_loss = loss_dict['mse_loss'].item()
                     final_cosine_loss = 0.0
+                elif isinstance(criterion, AngleAwareTripletLoss):
+                    # 角度感知三元组损失需要身份标签
+                    person_names = batch.get('person_names', None)
+                    if person_names is not None:
+                        # 将人名转换为数字标签
+                        unique_names = list(set(person_names))
+                        name_to_label = {name: idx for idx, name in enumerate(unique_names)}
+                        labels = torch.tensor([name_to_label[name] for name in person_names], device=device)
+                        
+                        # 使用矫正后的特征和原始输入特征
+                        loss, loss_dict = criterion(
+                            features=corrected_features,
+                            labels=labels,
+                            angles=angles,
+                            features_orig=input_features
+                        )
+                        cosine_loss = 0.0
+                        mse_loss = 0.0
+                        final_cosine_loss = 0.0
+                    else:
+                        # 如果没有person_names，回退到MSE损失
+                        loss = F.mse_loss(corrected_features, target_features)
+                        loss_dict = {'total_loss': loss.item(), 'num_triplets': 0}
+                        cosine_loss = 0.0
+                        mse_loss = loss.item()
+                        final_cosine_loss = 0.0
                 else:
                     loss = criterion(predicted_residual, target_residual)
                     cosine_loss = 0.0
@@ -188,6 +218,32 @@ def train_epoch(model, dataloader, criterion, optimizer, device, epoch,
                 cosine_loss = loss_dict['cosine_loss'].item()
                 mse_loss = loss_dict['mse_loss'].item()
                 final_cosine_loss = 0.0
+            elif isinstance(criterion, AngleAwareTripletLoss):
+                # 角度感知三元组损失需要身份标签
+                person_names = batch.get('person_names', None)
+                if person_names is not None:
+                    # 将人名转换为数字标签
+                    unique_names = list(set(person_names))
+                    name_to_label = {name: idx for idx, name in enumerate(unique_names)}
+                    labels = torch.tensor([name_to_label[name] for name in person_names], device=device)
+                    
+                    # 使用矫正后的特征和原始输入特征
+                    loss, loss_dict = criterion(
+                        features=corrected_features,
+                        labels=labels,
+                        angles=angles,
+                        features_orig=input_features
+                    )
+                    cosine_loss = 0.0
+                    mse_loss = 0.0
+                    final_cosine_loss = 0.0
+                else:
+                    # 如果没有person_names，回退到MSE损失
+                    loss = F.mse_loss(corrected_features, target_features)
+                    loss_dict = {'total_loss': loss.item(), 'num_triplets': 0}
+                    cosine_loss = 0.0
+                    mse_loss = loss.item()
+                    final_cosine_loss = 0.0
             else:
                 loss = criterion(predicted_residual, target_residual)
                 cosine_loss = 0.0
@@ -334,6 +390,25 @@ def validate(model, dataloader, criterion, device, use_amp=False):
                     loss = loss_dict['total_loss']
                     cosine_loss = loss_dict['cosine_loss'].item()
                     mse_loss = loss_dict['mse_loss'].item()
+                elif isinstance(criterion, AngleAwareTripletLoss):
+                    # 角度感知三元组损失需要身份标签
+                    person_names = batch.get('person_names', None)
+                    if person_names is not None:
+                        unique_names = list(set(person_names))
+                        name_to_label = {name: idx for idx, name in enumerate(unique_names)}
+                        labels = torch.tensor([name_to_label[name] for name in person_names], device=device)
+                        loss, loss_dict = criterion(
+                            features=corrected_features,
+                            labels=labels,
+                            angles=angles,
+                            features_orig=input_features
+                        )
+                        cosine_loss = 0.0
+                        mse_loss = 0.0
+                    else:
+                        loss = F.mse_loss(corrected_features, target_features)
+                        cosine_loss = 0.0
+                        mse_loss = loss.item()
                 else:
                     # 单一损失函数
                     loss = criterion(predicted_residual, target_residual)
@@ -875,6 +950,16 @@ def main():
             cosine_weight=args.cosine_weight,
             mse_weight=args.mse_weight
         )
+    elif args.loss_type == 'angle_aware_triplet':
+        if AngleAwareTripletLoss is None:
+            raise ImportError("无法导入 AngleAwareTripletLoss，请确保 angle_aware_loss.py 存在")
+        criterion = AngleAwareTripletLoss(
+            margin=0.2,
+            alpha=2.0,
+            beta=1.5,
+            angle_threshold=30.0
+        )
+        print(f"使用角度感知三元组损失：margin=0.2, alpha=2.0, beta=1.5")
     else:  # residual_and_final（改进版）
         criterion = ResidualAndFinalLoss(
             residual_weight=args.residual_weight,
