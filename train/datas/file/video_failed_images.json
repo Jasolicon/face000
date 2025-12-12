@@ -1,0 +1,86 @@
+{
+  "total_images": 10169,
+  "skipped_persons": 0,
+  "processed_persons": 36,
+  "successful": 10151,
+  "failed": 18,
+  "failed_details": {
+    "no_face_detected": [
+      {
+        "path": "train\\datas\\video\\柴懿珈\\柴懿珈frame_000230.jpg",
+        "person_name": "柴懿珈"
+      },
+      {
+        "path": "train\\datas\\video\\柴懿珈\\柴懿珈frame_000231.jpg",
+        "person_name": "柴懿珈"
+      },
+      {
+        "path": "train\\datas\\video\\柴懿珈\\柴懿珈frame_000234.jpg",
+        "person_name": "柴懿珈"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000014.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000015.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000017.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000018.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000019.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000020.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000021.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000022.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000023.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000024.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000025.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\袁润东\\袁润东frame_000026.jpg",
+        "person_name": "袁润东"
+      },
+      {
+        "path": "train\\datas\\video\\郑双晨\\frame_000079.jpg",
+        "person_name": "郑双晨"
+      },
+      {
+        "path": "train\\datas\\video\\郑双晨\\frame_000080.jpg",
+        "person_name": "郑双晨"
+      },
+      {
+        "path": "train\\datas\\video\\郑双晨\\frame_000090.jpg",
+        "person_name": "郑双晨"
+      }
+    ],
+    "no_landmarks": [],
+    "read_error": [],
+    "feature_error": []
+  }
+}

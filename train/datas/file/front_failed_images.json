@@ -1,0 +1,11 @@
+{
+  "total_images": 36,
+  "successful": 36,
+  "failed": 0,
+  "failed_details": {
+    "no_face_detected": [],
+    "no_landmarks": [],
+    "read_error": [],
+    "feature_error": []
+  }
+}
