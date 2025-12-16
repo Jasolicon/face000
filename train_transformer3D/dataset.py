@@ -28,9 +28,16 @@ if 'HF_ENDPOINT' not in os.environ:
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent))
 
-from train_transformer.utils_seed import set_seed
+# 设置随机种子（不依赖外部模块）
+def set_seed(seed=42):
+    """设置随机种子"""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
 
-# 设置随机种子
 set_seed(42)
 
 # 设置日志

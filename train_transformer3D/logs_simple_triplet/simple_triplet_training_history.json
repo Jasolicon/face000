@@ -1,0 +1,1108 @@
+{
+  "train_metrics_history": [
+    {
+      "total_loss": 1.0563506547641377,
+      "triplet_loss": 0.9566647081742645,
+      "reconstruction_loss": 0.9968594699037876,
+      "num_triplets": 21.83399209486166
+    },
+    {
+      "total_loss": 0.7830476084716707,
+      "triplet_loss": 0.6834589601034232,
+      "reconstruction_loss": 0.9958864841536571,
+      "num_triplets": 21.604743083003953
+    },
+    {
+      "total_loss": 0.7217389500659445,
+      "triplet_loss": 0.6225359601230018,
+      "reconstruction_loss": 0.9920298940108228,
+      "num_triplets": 21.952569169960473
+    },
+    {
+      "total_loss": 0.695690087767929,
+      "triplet_loss": 0.5968113573407938,
+      "reconstruction_loss": 0.9887873054493086,
+      "num_triplets": 21.92490118577075
+    },
+    {
+      "total_loss": 0.6798648477307422,
+      "triplet_loss": 0.5813270357286506,
+      "reconstruction_loss": 0.9853781223768302,
+      "num_triplets": 21.976284584980238
+    },
+    {
+      "total_loss": 0.6637245254083113,
+      "triplet_loss": 0.5653471367161265,
+      "reconstruction_loss": 0.9837738873930316,
+      "num_triplets": 21.782608695652176
+    },
+    {
+      "total_loss": 0.611163582962021,
+      "triplet_loss": 0.5130657477105559,
+      "reconstruction_loss": 0.9809783675925062,
+      "num_triplets": 22.051383399209485
+    },
+    {
+      "total_loss": 0.5729223464435268,
+      "triplet_loss": 0.4752110047891677,
+      "reconstruction_loss": 0.9771134066487489,
+      "num_triplets": 22.217391304347824
+    },
+    {
+      "total_loss": 0.5186612874622872,
+      "triplet_loss": 0.4214848407761382,
+      "reconstruction_loss": 0.9717644596759509,
+      "num_triplets": 21.76284584980237
+    },
+    {
+      "total_loss": 0.4630293139944906,
+      "triplet_loss": 0.3664822110192107,
+      "reconstruction_loss": 0.9654710047801022,
+      "num_triplets": 22.023715415019762
+    },
+    {
+      "total_loss": 0.40232202340020495,
+      "triplet_loss": 0.30620026017130597,
+      "reconstruction_loss": 0.9612176187424791,
+      "num_triplets": 22.043478260869566
+    },
+    {
+      "total_loss": 0.36722394718011847,
+      "triplet_loss": 0.27166432695897674,
+      "reconstruction_loss": 0.9555961741760314,
+      "num_triplets": 21.59683794466403
+    },
+    {
+      "total_loss": 0.32696398780515545,
+      "triplet_loss": 0.2320154196851456,
+      "reconstruction_loss": 0.9494856638399508,
+      "num_triplets": 21.889328063241106
+    },
+    {
+      "total_loss": 0.2958192050810388,
+      "triplet_loss": 0.20146946466192897,
+      "reconstruction_loss": 0.9434973868456754,
+      "num_triplets": 21.932806324110672
+    },
+    {
+      "total_loss": 0.26555365530162933,
+      "triplet_loss": 0.17188525712301608,
+      "reconstruction_loss": 0.9366839702421498,
+      "num_triplets": 22.17391304347826
+    },
+    {
+      "total_loss": 0.2294192128030679,
+      "triplet_loss": 0.13665852797670444,
+      "reconstruction_loss": 0.9276068347244866,
+      "num_triplets": 21.857707509881422
+    },
+    {
+      "total_loss": 0.19543730123005365,
+      "triplet_loss": 0.10345978457436955,
+      "reconstruction_loss": 0.91977514697629,
+      "num_triplets": 21.861660079051383
+    },
+    {
+      "total_loss": 0.18003536489876834,
+      "triplet_loss": 0.08901848065208555,
+      "reconstruction_loss": 0.9101688249309072,
+      "num_triplets": 21.92094861660079
+    },
+    {
+      "total_loss": 0.15928002376212433,
+      "triplet_loss": 0.06954728408756077,
+      "reconstruction_loss": 0.8973273816316024,
+      "num_triplets": 22.023715415019762
+    },
+    {
+      "total_loss": 0.1335678655403876,
+      "triplet_loss": 0.045369158466157904,
+      "reconstruction_loss": 0.8819870550641901,
+      "num_triplets": 22.015810276679844
+    },
+    {
+      "total_loss": 0.12557285402721097,
+      "triplet_loss": 0.0392888800385767,
+      "reconstruction_loss": 0.8628397261201157,
+      "num_triplets": 22.126482213438734
+    },
+    {
+      "total_loss": 0.11669483439253253,
+      "triplet_loss": 0.03304219995449314,
+      "reconstruction_loss": 0.8365263312230469,
+      "num_triplets": 22.039525691699605
+    },
+    {
+      "total_loss": 0.11357382422850537,
+      "triplet_loss": 0.03274413233039337,
+      "reconstruction_loss": 0.8082969047335297,
+      "num_triplets": 21.85375494071146
+    },
+    {
+      "total_loss": 0.1002616670586375,
+      "triplet_loss": 0.022704491065492275,
+      "reconstruction_loss": 0.7755717449037454,
+      "num_triplets": 22.221343873517785
+    },
+    {
+      "total_loss": 0.09019908459172418,
+      "triplet_loss": 0.01706916485830733,
+      "reconstruction_loss": 0.7312991821718782,
+      "num_triplets": 22.24505928853755
+    },
+    {
+      "total_loss": 0.08521485614328987,
+      "triplet_loss": 0.0161296896546766,
+      "reconstruction_loss": 0.6908516516327387,
+      "num_triplets": 22.035573122529645
+    },
+    {
+      "total_loss": 0.07879110393316849,
+      "triplet_loss": 0.014354693540118878,
+      "reconstruction_loss": 0.6443640888915232,
+      "num_triplets": 21.74308300395257
+    },
+    {
+      "total_loss": 0.07477367236444601,
+      "triplet_loss": 0.014188028752002929,
+      "reconstruction_loss": 0.6058564270909125,
+      "num_triplets": 21.794466403162055
+    },
+    {
+      "total_loss": 0.06327282063103476,
+      "triplet_loss": 0.00802465407608324,
+      "reconstruction_loss": 0.5524816593162627,
+      "num_triplets": 22.09881422924901
+    },
+    {
+      "total_loss": 0.059750628506713234,
+      "triplet_loss": 0.00919763185290929,
+      "reconstruction_loss": 0.5055299599180109,
+      "num_triplets": 21.972332015810277
+    },
+    {
+      "total_loss": 0.05352962815125469,
+      "triplet_loss": 0.006933926835476942,
+      "reconstruction_loss": 0.46595700432660553,
+      "num_triplets": 21.83399209486166
+    },
+    {
+      "total_loss": 0.04931754053463578,
+      "triplet_loss": 0.006240073896888386,
+      "reconstruction_loss": 0.4307746602141339,
+      "num_triplets": 21.893280632411066
+    },
+    {
+      "total_loss": 0.045707926271932396,
+      "triplet_loss": 0.0052735611727847045,
+      "reconstruction_loss": 0.4043436443852813,
+      "num_triplets": 21.865612648221344
+    },
+    {
+      "total_loss": 0.04026682096949444,
+      "triplet_loss": 0.0029896552654312463,
+      "reconstruction_loss": 0.37277164972817944,
+      "num_triplets": 21.99604743083004
+    },
+    {
+      "total_loss": 0.036284586547214996,
+      "triplet_loss": 0.0017959481180441223,
+      "reconstruction_loss": 0.34488637739490613,
+      "num_triplets": 21.885375494071145
+    },
+    {
+      "total_loss": 0.03445167429450708,
+      "triplet_loss": 0.0022554876407163897,
+      "reconstruction_loss": 0.32196185876258276,
+      "num_triplets": 21.83399209486166
+    },
+    {
+      "total_loss": 0.0339010531384601,
+      "triplet_loss": 0.003179993466237144,
+      "reconstruction_loss": 0.3072105919419541,
+      "num_triplets": 21.857707509881422
+    },
+    {
+      "total_loss": 0.030656969270451737,
+      "triplet_loss": 0.0020227863698295437,
+      "reconstruction_loss": 0.28634182525717694,
+      "num_triplets": 21.92094861660079
+    },
+    {
+      "total_loss": 0.027562243937562576,
+      "triplet_loss": 0.0009829700247360681,
+      "reconstruction_loss": 0.2657927352449168,
+      "num_triplets": 21.885375494071145
+    },
+    {
+      "total_loss": 0.028006794593727635,
+      "triplet_loss": 0.0023856196529572758,
+      "reconstruction_loss": 0.2562117449379721,
+      "num_triplets": 21.873517786561266
+    },
+    {
+      "total_loss": 0.024470049696477505,
+      "triplet_loss": 0.0007385891264492255,
+      "reconstruction_loss": 0.23731460213190012,
+      "num_triplets": 21.822134387351777
+    },
+    {
+      "total_loss": 0.023935836382769783,
+      "triplet_loss": 0.0009407425615517791,
+      "reconstruction_loss": 0.22995093429512659,
+      "num_triplets": 21.992094861660078
+    },
+    {
+      "total_loss": 0.023427915277158318,
+      "triplet_loss": 0.0014632754708274927,
+      "reconstruction_loss": 0.2196463944883686,
+      "num_triplets": 21.897233201581027
+    },
+    {
+      "total_loss": 0.021369737539837955,
+      "triplet_loss": 0.0006836523248293169,
+      "reconstruction_loss": 0.20686084809510605,
+      "num_triplets": 21.9802371541502
+    },
+    {
+      "total_loss": 0.020876438147112316,
+      "triplet_loss": 0.0008962490143099792,
+      "reconstruction_loss": 0.19980188768371762,
+      "num_triplets": 22.17391304347826
+    },
+    {
+      "total_loss": 0.019943346692757172,
+      "triplet_loss": 0.0005572085915751785,
+      "reconstruction_loss": 0.1938613770978724,
+      "num_triplets": 21.723320158102766
+    },
+    {
+      "total_loss": 0.01885042143727951,
+      "triplet_loss": 0.0003633751931256088,
+      "reconstruction_loss": 0.18487045863871518,
+      "num_triplets": 21.948616600790515
+    },
+    {
+      "total_loss": 0.019447069913296124,
+      "triplet_loss": 0.0009940439485944808,
+      "reconstruction_loss": 0.1845302562939791,
+      "num_triplets": 21.85375494071146
+    },
+    {
+      "total_loss": 0.018891511669036427,
+      "triplet_loss": 0.0009449199676195485,
+      "reconstruction_loss": 0.17946591301869028,
+      "num_triplets": 22.055335968379445
+    },
+    {
+      "total_loss": 0.01939167836570575,
+      "triplet_loss": 0.0013095199845072339,
+      "reconstruction_loss": 0.1808215794355973,
+      "num_triplets": 21.806324110671937
+    },
+    {
+      "total_loss": 0.01713297351561634,
+      "triplet_loss": 0.000525872808376791,
+      "reconstruction_loss": 0.1660710043115578,
+      "num_triplets": 21.76284584980237
+    },
+    {
+      "total_loss": 0.017051886303328243,
+      "triplet_loss": 0.000499789817134478,
+      "reconstruction_loss": 0.16552096181236237,
+      "num_triplets": 22.217391304347824
+    },
+    {
+      "total_loss": 0.016091405546565064,
+      "triplet_loss": 0.00021873607637044117,
+      "reconstruction_loss": 0.15872669172852408,
+      "num_triplets": 21.932806324110672
+    },
+    {
+      "total_loss": 0.01696538440735915,
+      "triplet_loss": 0.0008145628869487525,
+      "reconstruction_loss": 0.16150821197645465,
+      "num_triplets": 22.324110671936758
+    },
+    {
+      "total_loss": 0.016852115144724903,
+      "triplet_loss": 0.0008483203323539567,
+      "reconstruction_loss": 0.16003794514614603,
+      "num_triplets": 21.881422924901187
+    },
+    {
+      "total_loss": 0.01580903818646792,
+      "triplet_loss": 0.0005323394333295848,
+      "reconstruction_loss": 0.15276698514878043,
+      "num_triplets": 22.197628458498023
+    },
+    {
+      "total_loss": 0.0157628091192057,
+      "triplet_loss": 0.0005600605631180903,
+      "reconstruction_loss": 0.15202748280740067,
+      "num_triplets": 21.944664031620555
+    },
+    {
+      "total_loss": 0.015146344911174576,
+      "triplet_loss": 0.00043626073547712576,
+      "reconstruction_loss": 0.14710083945466595,
+      "num_triplets": 21.529644268774703
+    },
+    {
+      "total_loss": 0.014941020080959608,
+      "triplet_loss": 0.0002734564951809193,
+      "reconstruction_loss": 0.14667563358314423,
+      "num_triplets": 21.869565217391305
+    },
+    {
+      "total_loss": 0.015132726490379793,
+      "triplet_loss": 0.00045497178680055475,
+      "reconstruction_loss": 0.14677754480377017,
+      "num_triplets": 22.209486166007906
+    },
+    {
+      "total_loss": 0.015105785437576149,
+      "triplet_loss": 0.0006329236965554696,
+      "reconstruction_loss": 0.14472861534993167,
+      "num_triplets": 22.138339920948617
+    },
+    {
+      "total_loss": 0.014521748887691574,
+      "triplet_loss": 0.00034608038188765243,
+      "reconstruction_loss": 0.14175668299904925,
+      "num_triplets": 22.09090909090909
+    },
+    {
+      "total_loss": 0.01403202094402709,
+      "triplet_loss": 0.00034937836444226235,
+      "reconstruction_loss": 0.13682642402385065,
+      "num_triplets": 21.691699604743082
+    },
+    {
+      "total_loss": 0.01404082070550193,
+      "triplet_loss": 0.00046795549181983864,
+      "reconstruction_loss": 0.13572864994230008,
+      "num_triplets": 21.806324110671937
+    },
+    {
+      "total_loss": 0.01411355291622076,
+      "triplet_loss": 0.0002791710593530599,
+      "reconstruction_loss": 0.1383438166893518,
+      "num_triplets": 21.822134387351777
+    },
+    {
+      "total_loss": 0.014134763773133161,
+      "triplet_loss": 0.0004952408203334279,
+      "reconstruction_loss": 0.13639522776773325,
+      "num_triplets": 21.960474308300395
+    },
+    {
+      "total_loss": 0.013882952852712082,
+      "triplet_loss": 0.0004413093517538116,
+      "reconstruction_loss": 0.13441643319111096,
+      "num_triplets": 22.134387351778656
+    },
+    {
+      "total_loss": 0.013961651575983513,
+      "triplet_loss": 0.0008085513535312749,
+      "reconstruction_loss": 0.1315310001373291,
+      "num_triplets": 21.600790513833992
+    },
+    {
+      "total_loss": 0.013232553635425718,
+      "triplet_loss": 0.000234851520232444,
+      "reconstruction_loss": 0.1299770194080036,
+      "num_triplets": 22.201581027667984
+    },
+    {
+      "total_loss": 0.013872170817151136,
+      "triplet_loss": 0.0006921394988563162,
+      "reconstruction_loss": 0.13180031112060245,
+      "num_triplets": 21.85375494071146
+    },
+    {
+      "total_loss": 0.013011691079515478,
+      "triplet_loss": 0.0003408222616164257,
+      "reconstruction_loss": 0.12670868635177612,
+      "num_triplets": 21.861660079051383
+    },
+    {
+      "total_loss": 0.013677577841511593,
+      "triplet_loss": 0.0006411200345092611,
+      "reconstruction_loss": 0.13036457634726062,
+      "num_triplets": 21.857707509881422
+    },
+    {
+      "total_loss": 0.013051335033574123,
+      "triplet_loss": 0.00034329612401641697,
+      "reconstruction_loss": 0.12708038704197397,
+      "num_triplets": 21.960474308300395
+    },
+    {
+      "total_loss": 0.012476581340221313,
+      "triplet_loss": 0.0002524074013556608,
+      "reconstruction_loss": 0.12224173734310588,
+      "num_triplets": 22.027667984189723
+    },
+    {
+      "total_loss": 0.01316142395845515,
+      "triplet_loss": 0.0004424558083189508,
+      "reconstruction_loss": 0.1271896795793013,
+      "num_triplets": 22.067193675889328
+    },
+    {
+      "total_loss": 0.012857268369303862,
+      "triplet_loss": 0.0003353835456954739,
+      "reconstruction_loss": 0.12521884658119894,
+      "num_triplets": 22.138339920948617
+    },
+    {
+      "total_loss": 0.012880507665189358,
+      "triplet_loss": 0.00042647923416045785,
+      "reconstruction_loss": 0.12454028256797037,
+      "num_triplets": 22.039525691699605
+    },
+    {
+      "total_loss": 0.012396864600391256,
+      "triplet_loss": 0.00027942857033252835,
+      "reconstruction_loss": 0.12117435856770149,
+      "num_triplets": 22.1699604743083
+    },
+    {
+      "total_loss": 0.012563177366030546,
+      "triplet_loss": 0.0004886409241095067,
+      "reconstruction_loss": 0.12074536250042821,
+      "num_triplets": 22.24901185770751
+    },
+    {
+      "total_loss": 0.012925268688309099,
+      "triplet_loss": 0.0006353332214296718,
+      "reconstruction_loss": 0.12289935303299794,
+      "num_triplets": 22.17391304347826
+    },
+    {
+      "total_loss": 0.012064970937730532,
+      "triplet_loss": 0.0001705733472191482,
+      "reconstruction_loss": 0.11894397372784822,
+      "num_triplets": 21.944664031620555
+    },
+    {
+      "total_loss": 0.012134296911595602,
+      "triplet_loss": 0.0003064050246674288,
+      "reconstruction_loss": 0.11827891735220145,
+      "num_triplets": 22.015810276679844
+    },
+    {
+      "total_loss": 0.012324087248135933,
+      "triplet_loss": 0.0004329758196661484,
+      "reconstruction_loss": 0.11891111272125847,
+      "num_triplets": 21.806324110671937
+    },
+    {
+      "total_loss": 0.012027563593486551,
+      "triplet_loss": 0.00020589268804995322,
+      "reconstruction_loss": 0.11821670706564259,
+      "num_triplets": 22.106719367588934
+    },
+    {
+      "total_loss": 0.01227216994971508,
+      "triplet_loss": 0.0005387466518427411,
+      "reconstruction_loss": 0.11733423108639925,
+      "num_triplets": 22.126482213438734
+    },
+    {
+      "total_loss": 0.012096527485331528,
+      "triplet_loss": 0.0003524330902933014,
+      "reconstruction_loss": 0.11744094201227422,
+      "num_triplets": 22.110671936758894
+    },
+    {
+      "total_loss": 0.012134811980833885,
+      "triplet_loss": 0.00036491291278723827,
+      "reconstruction_loss": 0.11769898866005095,
+      "num_triplets": 21.92885375494071
+    },
+    {
+      "total_loss": 0.011835522644162886,
+      "triplet_loss": 0.00026145741493503743,
+      "reconstruction_loss": 0.11574065025616069,
+      "num_triplets": 21.715415019762847
+    },
+    {
+      "total_loss": 0.01151700119447449,
+      "triplet_loss": 0.00022988556705925083,
+      "reconstruction_loss": 0.11287115449490755,
+      "num_triplets": 21.6600790513834
+    },
+    {
+      "total_loss": 0.01176397601812489,
+      "triplet_loss": 0.00031176717274223193,
+      "reconstruction_loss": 0.1145220865374026,
+      "num_triplets": 21.857707509881422
+    },
+    {
+      "total_loss": 0.011742511962949051,
+      "triplet_loss": 0.0004254843235124462,
+      "reconstruction_loss": 0.11317027439713007,
+      "num_triplets": 21.873517786561266
+    },
+    {
+      "total_loss": 0.012112280118312288,
+      "triplet_loss": 0.0005227034426526178,
+      "reconstruction_loss": 0.11589576462983142,
+      "num_triplets": 21.964426877470355
+    },
+    {
+      "total_loss": 0.011697738920982647,
+      "triplet_loss": 0.0002430775133214648,
+      "reconstruction_loss": 0.11454661184620009,
+      "num_triplets": 22.205533596837945
+    },
+    {
+      "total_loss": 0.011347549374807964,
+      "triplet_loss": 0.00023042527533581725,
+      "reconstruction_loss": 0.11117123921398117,
+      "num_triplets": 21.9802371541502
+    },
+    {
+      "total_loss": 0.01164172518733344,
+      "triplet_loss": 0.0004627574185448286,
+      "reconstruction_loss": 0.11178967580493732,
+      "num_triplets": 21.861660079051383
+    },
+    {
+      "total_loss": 0.010961192678439287,
+      "triplet_loss": 9.66015450606719e-05,
+      "reconstruction_loss": 0.10864590962413742,
+      "num_triplets": 21.972332015810277
+    },
+    {
+      "total_loss": 0.011380546969240126,
+      "triplet_loss": 0.00035877637683621907,
+      "reconstruction_loss": 0.1102177038965489,
+      "num_triplets": 22.031620553359684
+    },
+    {
+      "total_loss": 0.011678833212600395,
+      "triplet_loss": 0.000549653947356584,
+      "reconstruction_loss": 0.11129179066820107,
+      "num_triplets": 21.703557312252965
+    },
+    {
+      "total_loss": 0.011174718702116266,
+      "triplet_loss": 0.00027278501301379913,
+      "reconstruction_loss": 0.10901933484397858,
+      "num_triplets": 22.23715415019763
+    },
+    {
+      "total_loss": 0.011393284436182777,
+      "triplet_loss": 0.000290774483980957,
+      "reconstruction_loss": 0.11102509757746822,
+      "num_triplets": 21.960474308300395
+    }
+  ],
+  "val_metrics_history": [
+    {
+      "total_loss": 2.701875474717882,
+      "triplet_loss": 2.598990206365232,
+      "cosine_sim": -0.023810238370464906
+    },
+    {
+      "total_loss": 2.659706981093795,
+      "triplet_loss": 2.562895161134225,
+      "cosine_sim": 0.04001880105998781
+    },
+    {
+      "total_loss": 2.8321494967849166,
+      "triplet_loss": 2.7335820021452726,
+      "cosine_sim": 0.025610143284278887
+    },
+    {
+      "total_loss": 2.3423857953813343,
+      "triplet_loss": 2.243784502700523,
+      "cosine_sim": 0.0103976766889294
+    },
+    {
+      "total_loss": 2.862475134708263,
+      "triplet_loss": 2.7639391952090793,
+      "cosine_sim": 0.010572029062098375
+    },
+    {
+      "total_loss": 2.5120775478857533,
+      "triplet_loss": 2.4153897409085876,
+      "cosine_sim": 0.021287076123472717
+    },
+    {
+      "total_loss": 2.6580366293589273,
+      "triplet_loss": 2.5630241941522667,
+      "cosine_sim": 0.05616966234865012
+    },
+    {
+      "total_loss": 2.5250415007273355,
+      "triplet_loss": 2.426838998441343,
+      "cosine_sim": 0.026857535044352215
+    },
+    {
+      "total_loss": 2.029068143279464,
+      "triplet_loss": 1.9333899595119335,
+      "cosine_sim": 0.04413071502414015
+    },
+    {
+      "total_loss": 1.491089990845433,
+      "triplet_loss": 1.3969741485736988,
+      "cosine_sim": 0.07047036566116192
+    },
+    {
+      "total_loss": 1.8040268465324685,
+      "triplet_loss": 1.7077292424661141,
+      "cosine_sim": 0.04030292363906348
+    },
+    {
+      "total_loss": 1.965358063026711,
+      "triplet_loss": 1.8709877376203183,
+      "cosine_sim": 0.06814723903382267
+    },
+    {
+      "total_loss": 1.6831069036766335,
+      "triplet_loss": 1.58863686632227,
+      "cosine_sim": 0.07692012177021415
+    },
+    {
+      "total_loss": 1.4860384375960738,
+      "triplet_loss": 1.3929444352785747,
+      "cosine_sim": 0.07420023779074351
+    },
+    {
+      "total_loss": 1.5881482892566257,
+      "triplet_loss": 1.4931570181140192,
+      "cosine_sim": 0.06933625566738623
+    },
+    {
+      "total_loss": 2.1013557027887413,
+      "triplet_loss": 2.0051603538018687,
+      "cosine_sim": 0.04557412600627652
+    },
+    {
+      "total_loss": 1.4665067394574482,
+      "triplet_loss": 1.373929661733133,
+      "cosine_sim": 0.06909480415008686
+    },
+    {
+      "total_loss": 1.2882962844989918,
+      "triplet_loss": 1.1969843683419403,
+      "cosine_sim": 0.08220464405086306
+    },
+    {
+      "total_loss": 1.4144543365195945,
+      "triplet_loss": 1.3228816434189126,
+      "cosine_sim": 0.08470315293029503
+    },
+    {
+      "total_loss": 1.1132006027080394,
+      "triplet_loss": 1.0218480141074568,
+      "cosine_sim": 0.09793810104882275
+    },
+    {
+      "total_loss": 1.1384490264786615,
+      "triplet_loss": 1.047196838590834,
+      "cosine_sim": 0.10265957840062954
+    },
+    {
+      "total_loss": 0.9616734694551539,
+      "triplet_loss": 0.873425062055941,
+      "cosine_sim": 0.12597601281272042
+    },
+    {
+      "total_loss": 1.1564212573899164,
+      "triplet_loss": 1.0692543939307884,
+      "cosine_sim": 0.14340971189516563
+    },
+    {
+      "total_loss": 0.9551778501934476,
+      "triplet_loss": 0.8704017930560641,
+      "cosine_sim": 0.16136000333008943
+    },
+    {
+      "total_loss": 1.3172391410227176,
+      "triplet_loss": 1.2330716561388086,
+      "cosine_sim": 0.16305237511793771
+    },
+    {
+      "total_loss": 1.0724174269923457,
+      "triplet_loss": 0.991576733412566,
+      "cosine_sim": 0.1998676856358846
+    },
+    {
+      "total_loss": 1.2577185763253107,
+      "triplet_loss": 1.177778720855713,
+      "cosine_sim": 0.19718775539486497
+    },
+    {
+      "total_loss": 1.2971156548570704,
+      "triplet_loss": 1.2202582756678264,
+      "cosine_sim": 0.23496905245162822
+    },
+    {
+      "total_loss": 0.6757152257142244,
+      "triplet_loss": 0.6027288712837078,
+      "cosine_sim": 0.27174319326877594
+    },
+    {
+      "total_loss": 0.5766597334985379,
+      "triplet_loss": 0.5064780160232827,
+      "cosine_sim": 0.3011277472531354
+    },
+    {
+      "total_loss": 0.9761740940588491,
+      "triplet_loss": 0.9059013691213396,
+      "cosine_sim": 0.29594177449191056
+    },
+    {
+      "total_loss": 0.9682731628417969,
+      "triplet_loss": 0.8990843881059576,
+      "cosine_sim": 0.30271822103747614
+    },
+    {
+      "total_loss": 1.125811183894122,
+      "triplet_loss": 1.0571802015657779,
+      "cosine_sim": 0.308889240026474
+    },
+    {
+      "total_loss": 0.624697286773611,
+      "triplet_loss": 0.5614041807474913,
+      "cosine_sim": 0.3408495353327857
+    },
+    {
+      "total_loss": 0.5722777909702725,
+      "triplet_loss": 0.5101566866592124,
+      "cosine_sim": 0.3575428503530997
+    },
+    {
+      "total_loss": 0.7560987019980395,
+      "triplet_loss": 0.6954321993721856,
+      "cosine_sim": 0.355646127903903
+    },
+    {
+      "total_loss": 0.5763605336348215,
+      "triplet_loss": 0.5172255878095273,
+      "cosine_sim": 0.3752749374619237
+    },
+    {
+      "total_loss": 0.569710718260871,
+      "triplet_loss": 0.5114128550997487,
+      "cosine_sim": 0.3814348379770915
+    },
+    {
+      "total_loss": 0.6181406235253369,
+      "triplet_loss": 0.5608721651412822,
+      "cosine_sim": 0.37430087946079393
+    },
+    {
+      "total_loss": 0.5237923463185629,
+      "triplet_loss": 0.4671892937686708,
+      "cosine_sim": 0.38105871390413354
+    },
+    {
+      "total_loss": 0.694816416060483,
+      "triplet_loss": 0.6386328151932469,
+      "cosine_sim": 0.3840878727259459
+    },
+    {
+      "total_loss": 0.5406473047203488,
+      "triplet_loss": 0.4851641025808122,
+      "cosine_sim": 0.38057894066528036
+    },
+    {
+      "total_loss": 0.5214653544955783,
+      "triplet_loss": 0.4665247036351098,
+      "cosine_sim": 0.38781568187254445
+    },
+    {
+      "total_loss": 0.4023088779714372,
+      "triplet_loss": 0.35063738017170515,
+      "cosine_sim": 0.3990871277120378
+    },
+    {
+      "total_loss": 0.5767691201633878,
+      "triplet_loss": 0.5241277372395551,
+      "cosine_sim": 0.39363669134952406
+    },
+    {
+      "total_loss": 0.3555522997070242,
+      "triplet_loss": 0.30539368755287594,
+      "cosine_sim": 0.4034910500049591
+    },
+    {
+      "total_loss": 0.448265846128817,
+      "triplet_loss": 0.39741379022598267,
+      "cosine_sim": 0.40532135742681996
+    },
+    {
+      "total_loss": 0.4944089099212929,
+      "triplet_loss": 0.44397415275926944,
+      "cosine_sim": 0.40191058648957145
+    },
+    {
+      "total_loss": 0.5664077058986381,
+      "triplet_loss": 0.5155363425060555,
+      "cosine_sim": 0.4049683489181377
+    },
+    {
+      "total_loss": 0.3660861259257352,
+      "triplet_loss": 0.31646782546131697,
+      "cosine_sim": 0.41875076404324285
+    },
+    {
+      "total_loss": 0.3723098525294551,
+      "triplet_loss": 0.3245882171171683,
+      "cosine_sim": 0.4244319873827475
+    },
+    {
+      "total_loss": 0.36733262130507716,
+      "triplet_loss": 0.3195272419187758,
+      "cosine_sim": 0.42668469967665495
+    },
+    {
+      "total_loss": 0.4234835549637123,
+      "triplet_loss": 0.3762661472514824,
+      "cosine_sim": 0.41966030443156205
+    },
+    {
+      "total_loss": 0.3766265058958972,
+      "triplet_loss": 0.3290984558838385,
+      "cosine_sim": 0.4309754603438907
+    },
+    {
+      "total_loss": 0.6583931468151234,
+      "triplet_loss": 0.6084105383466791,
+      "cosine_sim": 0.4120670932310599
+    },
+    {
+      "total_loss": 0.6951874317946257,
+      "triplet_loss": 0.6458142973758556,
+      "cosine_sim": 0.41981325878037346
+    },
+    {
+      "total_loss": 0.5223557126742823,
+      "triplet_loss": 0.47348741469559846,
+      "cosine_sim": 0.4326892528269026
+    },
+    {
+      "total_loss": 0.460321546152786,
+      "triplet_loss": 0.41371062122009417,
+      "cosine_sim": 0.4352390589537444
+    },
+    {
+      "total_loss": 0.6088901449132849,
+      "triplet_loss": 0.5610030801207931,
+      "cosine_sim": 0.43757777633490386
+    },
+    {
+      "total_loss": 0.33135704199473065,
+      "triplet_loss": 0.28558174382757257,
+      "cosine_sim": 0.4492437420067964
+    },
+    {
+      "total_loss": 0.6278049736111252,
+      "triplet_loss": 0.5792738982924709,
+      "cosine_sim": 0.42265901411021195
+    },
+    {
+      "total_loss": 0.4621635454672354,
+      "triplet_loss": 0.4151304132408566,
+      "cosine_sim": 0.43957506285773384
+    },
+    {
+      "total_loss": 0.4367203105379034,
+      "triplet_loss": 0.39097103421334867,
+      "cosine_sim": 0.4461488061481052
+    },
+    {
+      "total_loss": 0.6677215982366491,
+      "triplet_loss": 0.619447883632448,
+      "cosine_sim": 0.44280307381241407
+    },
+    {
+      "total_loss": 0.40178564687569934,
+      "triplet_loss": 0.3564093537904598,
+      "cosine_sim": 0.45145812851411327
+    },
+    {
+      "total_loss": 0.4150005413426293,
+      "triplet_loss": 0.3697388928245615,
+      "cosine_sim": 0.4407556034900524
+    },
+    {
+      "total_loss": 0.34621845185756683,
+      "triplet_loss": 0.30173896473866924,
+      "cosine_sim": 0.4559008346663581
+    },
+    {
+      "total_loss": 0.3799996188393346,
+      "triplet_loss": 0.33556025116531935,
+      "cosine_sim": 0.45038531886206734
+    },
+    {
+      "total_loss": 0.5945584442880418,
+      "triplet_loss": 0.54838737183147,
+      "cosine_sim": 0.43017979904457376
+    },
+    {
+      "total_loss": 0.5569457168932315,
+      "triplet_loss": 0.5099864933225844,
+      "cosine_sim": 0.44092689068229113
+    },
+    {
+      "total_loss": 0.41163494079201307,
+      "triplet_loss": 0.3668520698944728,
+      "cosine_sim": 0.45660899855472425
+    },
+    {
+      "total_loss": 0.7036935521496667,
+      "triplet_loss": 0.6563648195178421,
+      "cosine_sim": 0.4442047730640129
+    },
+    {
+      "total_loss": 0.32998225148077365,
+      "triplet_loss": 0.2860243811651512,
+      "cosine_sim": 0.4499519334899055
+    },
+    {
+      "total_loss": 0.7085731515177974,
+      "triplet_loss": 0.6615686504929154,
+      "cosine_sim": 0.43231226559038516
+    },
+    {
+      "total_loss": 0.49414183806490014,
+      "triplet_loss": 0.44861035600856497,
+      "cosine_sim": 0.44505930057278387
+    },
+    {
+      "total_loss": 0.38804622436011277,
+      "triplet_loss": 0.3432749747126191,
+      "cosine_sim": 0.44846833414501613
+    },
+    {
+      "total_loss": 0.34922155848255865,
+      "triplet_loss": 0.3048992024527656,
+      "cosine_sim": 0.4577104460310053
+    },
+    {
+      "total_loss": 0.4165531556915354,
+      "triplet_loss": 0.3723916781169397,
+      "cosine_sim": 0.45775837147677384
+    },
+    {
+      "total_loss": 0.42214512217927863,
+      "triplet_loss": 0.3774889255011523,
+      "cosine_sim": 0.4550064327540221
+    },
+    {
+      "total_loss": 0.425206673917947,
+      "triplet_loss": 0.38025518865497027,
+      "cosine_sim": 0.45494120981958175
+    },
+    {
+      "total_loss": 0.32461732074066446,
+      "triplet_loss": 0.280857190489769,
+      "cosine_sim": 0.4556647781972532
+    },
+    {
+      "total_loss": 0.40248314208454555,
+      "triplet_loss": 0.358763857572167,
+      "cosine_sim": 0.4598359277954808
+    },
+    {
+      "total_loss": 0.6244510765428897,
+      "triplet_loss": 0.5783528906327707,
+      "cosine_sim": 0.46058546944900797
+    },
+    {
+      "total_loss": 0.32797711977252253,
+      "triplet_loss": 0.28451477653450435,
+      "cosine_sim": 0.46352789137098527
+    },
+    {
+      "total_loss": 0.38888524693471416,
+      "triplet_loss": 0.3449669899763884,
+      "cosine_sim": 0.4672040950368952
+    },
+    {
+      "total_loss": 0.6353500695140274,
+      "triplet_loss": 0.5898759210551227,
+      "cosine_sim": 0.4547928836610582
+    },
+    {
+      "total_loss": 0.5037384038722074,
+      "triplet_loss": 0.45918569134341347,
+      "cosine_sim": 0.45028956289644595
+    },
+    {
+      "total_loss": 0.37036567981596347,
+      "triplet_loss": 0.3271713924628717,
+      "cosine_sim": 0.46343422267172074
+    },
+    {
+      "total_loss": 0.34157101975546944,
+      "triplet_loss": 0.29799344142278034,
+      "cosine_sim": 0.4583676071078689
+    },
+    {
+      "total_loss": 0.4610090724847935,
+      "triplet_loss": 0.4160242075169528,
+      "cosine_sim": 0.45695740315649247
+    },
+    {
+      "total_loss": 0.43710291054513717,
+      "triplet_loss": 0.3932568193585784,
+      "cosine_sim": 0.45911165519996927
+    },
+    {
+      "total_loss": 0.39007147815492416,
+      "triplet_loss": 0.3455779701471329,
+      "cosine_sim": 0.46429550537356623
+    },
+    {
+      "total_loss": 0.3826153543260362,
+      "triplet_loss": 0.3374826140977718,
+      "cosine_sim": 0.45729656020800274
+    },
+    {
+      "total_loss": 0.3762688918246163,
+      "triplet_loss": 0.3323268929013499,
+      "cosine_sim": 0.4583117531405555
+    },
+    {
+      "total_loss": 0.48073479533195496,
+      "triplet_loss": 0.4356704111452456,
+      "cosine_sim": 0.45421471750294723
+    },
+    {
+      "total_loss": 0.35738377769788104,
+      "triplet_loss": 0.31350797359590177,
+      "cosine_sim": 0.4656585697774534
+    },
+    {
+      "total_loss": 0.3403338927913595,
+      "triplet_loss": 0.297076192718965,
+      "cosine_sim": 0.4620990190241072
+    },
+    {
+      "total_loss": 0.3645778712299135,
+      "triplet_loss": 0.3209030341219019,
+      "cosine_sim": 0.4609437739407575
+    },
+    {
+      "total_loss": 0.4479877380309282,
+      "triplet_loss": 0.4023631132311291,
+      "cosine_sim": 0.4595909118652344
+    },
+    {
+      "total_loss": 0.30622926354408264,
+      "triplet_loss": 0.2629702930097227,
+      "cosine_sim": 0.4643821760460182
+    }
+  ],
+  "total_epochs": 100,
+  "best_val_loss": 0.30622926354408264
+}
