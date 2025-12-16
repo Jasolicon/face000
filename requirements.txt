@@ -19,6 +19,7 @@ onnxruntime>=1.15.0
 
 # 可视化
 matplotlib>=3.7.0
+plotly>=5.0.0  # 用于交互式可视化
 
 # 多姿态人脸生成依赖（可选）
 #diffusers>=0.21.0,<1.0.0

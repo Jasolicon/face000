@@ -47,7 +47,7 @@ class SpatialAttentionFusion(nn.Module):
         batch_size = features.shape[0]
         
         # 1. 编码关键点信息
-        kp_flattened = keypoints_2d.view(batch_size, -1)  # [batch, num_kp*2]
+        kp_flattened = keypoints_2d.reshape(batch_size, -1)  # [batch, num_kp*2]
         kp_encoded = self.keypoint_encoder(kp_flattened)  # [batch, feature_dim]
         
         # 2. 生成空间注意力（基于原始特征和关键点信息）
@@ -152,36 +152,23 @@ class TransformerDecoderOnly3D(nn.Module):
         super(TransformerDecoderOnly3D, self).__init__()
         
         self.d_model = d_model
-        self.use_spatial_attention = use_spatial_attention
+        self.use_spatial_attention = False  # 禁用空间注意力（需要关键点）
         self.use_pose_attention = use_pose_attention
         self.use_angle_pe = use_angle_pe
         self.use_angle_conditioning = use_angle_conditioning
         
-        # ========== 3D信息处理分支 ==========
-        if use_spatial_attention:
-            self.spatial_fusion = SpatialAttentionFusion(d_model, num_keypoints)
-            
+        # ========== 姿态信息处理分支 ==========
+        # 注意：不再使用关键点，只使用姿态作为位置编码
+        
         if use_pose_attention:
             self.pose_attention = PoseConditionedAttention(d_model, pose_dim)
         
-        # 3D关键点编码器（将关键点坐标映射到特征空间）
-        self.keypoint_encoder = nn.Sequential(
-            nn.Linear(num_keypoints * 3, 256),  # 3D点有x,y,z
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(256, d_model)
-        )
-        
-        # 姿态编码器
+        # 姿态编码器（用于位置编码）
         self.pose_encoder = nn.Sequential(
             nn.Linear(pose_dim, 128),
             nn.ReLU(),
             nn.Linear(128, d_model)
         )
-        
-        # 3D信息融合权重（可学习）
-        self.fusion_weights = nn.Parameter(torch.tensor([0.6, 0.2, 0.2]))  # [src, kp, pose]
         
         # ========== 原网络结构（基础架构） ==========
         # 输入特征投影
@@ -230,8 +217,8 @@ class TransformerDecoderOnly3D(nn.Module):
         self,
         src: torch.Tensor,  # 侧面特征 [batch, d_model]
         angles: torch.Tensor,  # 原始角度（保留兼容性）[batch, ...]
-        keypoints_3d: torch.Tensor,  # 3D关键点 [batch, num_kp, 3]
-        pose: torch.Tensor,  # 姿态向量 [batch, pose_dim]
+        keypoints_3d: torch.Tensor = None,  # 3D关键点（已废弃，不再使用）[batch, num_kp, 3]
+        pose: torch.Tensor = None,  # 姿态向量 [batch, pose_dim] (欧拉角)
         src_mask: Optional[torch.Tensor] = None,
         return_residual: bool = True
     ):
@@ -241,8 +228,8 @@ class TransformerDecoderOnly3D(nn.Module):
         Args:
             src: 输入特征 [batch, d_model]
             angles: 原始角度（保留兼容性，实际使用pose）
-            keypoints_3d: 3D关键点 [batch, num_kp, 3]
-            pose: 姿态向量 [batch, pose_dim] (欧拉角)
+            keypoints_3d: 3D关键点（已废弃，不再使用，保留以兼容旧代码）
+            pose: 姿态向量 [batch, pose_dim] (欧拉角)，如果为None则使用angles
             src_mask: 源序列掩码（可选）
             return_residual: 是否返回残差（True）或完整特征（False）
             
@@ -251,36 +238,24 @@ class TransformerDecoderOnly3D(nn.Module):
         """
         batch_size = src.size(0)
         
-        # ========== 第一阶段：3D信息编码与融合 ==========
-        # 1. 编码3D关键点
-        keypoints_flattened = keypoints_3d.view(batch_size, -1)  # [batch, num_kp*3]
-        kp_features = self.keypoint_encoder(keypoints_flattened)  # [batch, d_model]
+        # 如果pose为None，使用angles（兼容性）
+        if pose is None:
+            pose = angles if angles.shape[-1] == 3 else angles[:, :3]
         
-        # 2. 编码姿态
+        # ========== 第一阶段：姿态编码与融合 ==========
+        # 1. 编码姿态（作为位置编码）
         pose_features = self.pose_encoder(pose)  # [batch, d_model]
         
-        # 3. 初始特征投影
+        # 2. 初始特征投影
         src_features = self.input_projection(src)  # [batch, d_model]
         
-        # 4. 空间注意力融合（如果启用）
-        if self.use_spatial_attention:
-            # 需要将3D关键点投影到2D用于空间注意力
-            # 简化：使用3D点的x,y坐标（假设已归一化）
-            keypoints_2d = keypoints_3d[:, :, :2]  # 取x,y坐标
-            src_features, spatial_attn = self.spatial_fusion(src_features, keypoints_2d)
-        
-        # 5. 姿态条件注意力（如果启用）
+        # 3. 姿态条件注意力（如果启用）
         if self.use_pose_attention:
             src_features, pose_attn = self.pose_attention(src_features, pose)
         
-        # 6. 融合3D信息（使用可学习权重）
-        # 归一化权重
-        weights = F.softmax(self.fusion_weights, dim=0)
-        combined_features = (
-            weights[0] * src_features + 
-            weights[1] * kp_features + 
-            weights[2] * pose_features
-        )
+        # 4. 融合特征和姿态编码
+        # 使用简单的加权融合（可以改为可学习权重）
+        combined_features = 0.7 * src_features + 0.3 * pose_features
         
         # ========== 第二阶段：原有的角度条件处理 ==========
         # 添加角度位置编码（现在使用更精确的pose作为角度）

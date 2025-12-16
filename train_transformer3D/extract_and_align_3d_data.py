@@ -46,13 +46,16 @@ class Landmark3DAligner:
     
     def compute_standard_from_faces(self, all_face_landmarks_3d: List[np.ndarray]) -> Dict:
         """
-        从所有正面图计算标准坐标系
+        从所有正面图计算标准坐标系（用于归一化尺度）
+        
+        注意：现在只计算归一化尺度，不再使用全局标准中心点。
+        每个图片使用自己的中心点作为零点。
         
         Args:
             all_face_landmarks_3d: 所有正面图的3D关键点列表，每个 [5, 3]
         
         Returns:
-            dict: 包含标准中心点、尺度、标准关键点的字典
+            dict: 包含标准尺度、标准关键点的字典
         """
         if len(all_face_landmarks_3d) == 0:
             raise ValueError("没有正面图关键点数据")
@@ -61,49 +64,74 @@ class Landmark3DAligner:
         all_landmarks = np.array(all_face_landmarks_3d)
         logger.info(f"收集到 {len(all_landmarks)} 个正面图，关键点形状: {all_landmarks.shape}")
         
-        # 计算每个关键点的平均位置 [5, 3]
-        mean_landmarks = np.mean(all_landmarks, axis=0)
+        # 计算每个图片自己的中心点，然后计算相对坐标
+        # 这样可以消除位置差异，只保留形状信息
+        all_relative_landmarks = []
+        for landmarks_3d in all_landmarks:
+            # 计算该图片的中心点
+            image_center = np.mean(landmarks_3d, axis=0)  # [3]
+            # 计算相对于中心点的坐标
+            relative_landmarks = landmarks_3d - image_center  # [5, 3]
+            all_relative_landmarks.append(relative_landmarks)
         
-        # 计算中心点（所有关键点的平均位置）
-        self.standard_center = np.mean(mean_landmarks, axis=0)  # [3]
+        all_relative_landmarks = np.array(all_relative_landmarks)  # [N, 5, 3]
         
-        # 计算相对于中心点的标准坐标
-        self.standard_landmarks = mean_landmarks - self.standard_center  # [5, 3]
+        # 计算每个关键点的平均相对位置 [5, 3]
+        mean_relative_landmarks = np.mean(all_relative_landmarks, axis=0)
         
-        # 计算标准尺度（使用标准坐标的最大距离）
+        # 保存标准关键点（用于参考）
+        self.standard_landmarks = mean_relative_landmarks  # [5, 3]
+        
+        # 计算标准尺度（使用平均相对坐标的最大距离）
         distances = np.linalg.norm(self.standard_landmarks, axis=1)
         max_distance = np.max(distances)
         self.standard_scale = 1.0 / (max_distance + 1e-8)
         
-        logger.info(f"标准中心点: {self.standard_center}")
+        # 保留标准中心点（用于兼容性，但不再使用）
+        mean_landmarks = np.mean(all_landmarks, axis=0)  # [5, 3]
+        self.standard_center = np.mean(mean_landmarks, axis=0)  # [3]
+        
         logger.info(f"标准尺度: {self.standard_scale:.6f}")
         logger.info(f"最大距离: {max_distance:.2f}")
+        logger.info(f"注意: 现在使用每张图片自己的中心点作为零点，不再使用全局标准中心点")
         
         return {
-            'standard_center': self.standard_center.tolist(),
+            'standard_center': self.standard_center.tolist(),  # 保留用于兼容性
             'standard_scale': float(self.standard_scale),
             'standard_landmarks': self.standard_landmarks.tolist(),
             'mean_landmarks': mean_landmarks.tolist(),
-            'num_samples': len(all_landmarks)
+            'num_samples': len(all_landmarks),
+            'note': '现在使用每张图片自己的中心点作为零点进行归一化'
         }
     
-    def align_and_normalize(self, landmarks_3d: np.ndarray) -> np.ndarray:
+    def align_and_normalize(self, landmarks_3d: np.ndarray, use_self_center: bool = True) -> np.ndarray:
         """
         对齐和归一化3D关键点
         
         Args:
             landmarks_3d: 3D关键点 [5, 3]
+            use_self_center: 是否使用图片自己的中心点（默认True，推荐）
+                - True: 使用该图片自己的中心点（5个关键点的平均值）作为零点
+                - False: 使用全局标准中心点（不推荐，会导致位置偏移）
         
         Returns:
             aligned_normalized: 对齐和归一化后的关键点 [5, 3]
         """
-        if self.standard_center is None or self.standard_scale is None:
+        if self.standard_scale is None:
             raise ValueError("请先调用 compute_standard_from_faces 计算标准坐标系")
         
-        # 对齐：减去标准中心点
-        aligned = landmarks_3d - self.standard_center
+        if use_self_center:
+            # 使用该图片自己的中心点（5个关键点的平均值）作为零点
+            # 这样可以消除图片位置差异，只保留关键点之间的相对位置关系
+            image_center = np.mean(landmarks_3d, axis=0)  # [3]
+            aligned = landmarks_3d - image_center  # [5, 3]
+        else:
+            # 使用全局标准中心点（不推荐，会导致位置偏移）
+            if self.standard_center is None:
+                raise ValueError("请先调用 compute_standard_from_faces 计算标准坐标系")
+            aligned = landmarks_3d - self.standard_center
         
-        # 归一化：乘以标准尺度
+        # 归一化：乘以标准尺度（使用标准尺度保持一致性）
         normalized = aligned * self.standard_scale
         
         return normalized
@@ -333,10 +361,11 @@ def extract_face_data(
     standard_info = aligner.compute_standard_from_faces(all_face_landmarks_3d)
     
     # 对齐和归一化所有正面图关键点
-    logger.info("对齐和归一化正面图关键点...")
+    # 使用每张图片自己的中心点作为零点（消除位置差异，保留形状信息）
+    logger.info("对齐和归一化正面图关键点（使用每张图片自己的中心点）...")
     aligned_normalized_landmarks = []
     for landmarks_3d in face_landmarks_3d:
-        aligned_normalized = aligner.align_and_normalize(landmarks_3d)
+        aligned_normalized = aligner.align_and_normalize(landmarks_3d, use_self_center=True)
         aligned_normalized_landmarks.append(aligned_normalized)
     
     aligned_normalized_landmarks = np.array(aligned_normalized_landmarks)  # [N, 5, 3]
@@ -520,7 +549,8 @@ def extract_video_data(
     
     # 存储所有视频帧数据
     all_video_features = []
-    all_video_landmarks_3d = []
+    all_video_landmarks_3d = []  # 归一化后的关键点（用于保存到npy）
+    all_video_landmarks_3d_original = []  # 原始关键点（用于保存到metadata）
     all_video_landmarks_2d = []
     all_video_poses = []
     all_video_boxes = []
@@ -541,6 +571,7 @@ def extract_video_data(
                 existing_poses = existing_video_data.get('poses', [])
                 existing_boxes = existing_video_data.get('boxes', [])
                 existing_landmarks_2d = existing_video_data.get('landmarks_2d', [])
+                existing_landmarks_3d_original = existing_video_data.get('landmarks_3d_original', [])
                 
                 # 构建完整处理的人员集合（排除部分处理的人员）
                 fully_processed_persons = set()
@@ -565,6 +596,12 @@ def extract_video_data(
                         # 完整处理的人员：加载所有数据
                         all_video_features.append(existing_features[idx])
                         all_video_landmarks_3d.append(existing_keypoints[idx])
+                        # 如果有原始关键点，也加载
+                        if existing_landmarks_3d_original and idx < len(existing_landmarks_3d_original):
+                            all_video_landmarks_3d_original.append(np.array(existing_landmarks_3d_original[idx]))
+                        else:
+                            # 如果没有原始关键点，从归一化的关键点反推（不准确，但用于兼容性）
+                            all_video_landmarks_3d_original.append(existing_keypoints[idx])
                         all_video_landmarks_2d.append(np.array(existing_landmarks_2d[idx]))
                         all_video_poses.append(np.array(existing_poses[idx]))
                         all_video_boxes.append(np.array(existing_boxes[idx]))
@@ -577,6 +614,12 @@ def extract_video_data(
                         if frame_index in processed_frames:
                             all_video_features.append(existing_features[idx])
                             all_video_landmarks_3d.append(existing_keypoints[idx])
+                            # 如果有原始关键点，也加载
+                            if existing_landmarks_3d_original and idx < len(existing_landmarks_3d_original):
+                                all_video_landmarks_3d_original.append(np.array(existing_landmarks_3d_original[idx]))
+                            else:
+                                # 如果没有原始关键点，从归一化的关键点反推（不准确，但用于兼容性）
+                                all_video_landmarks_3d_original.append(existing_keypoints[idx])
                             all_video_landmarks_2d.append(np.array(existing_landmarks_2d[idx]))
                             all_video_poses.append(np.array(existing_poses[idx]))
                             all_video_boxes.append(np.array(existing_boxes[idx]))
@@ -587,6 +630,7 @@ def extract_video_data(
             logger.warning(f"加载已有视频数据失败: {e}，将重新处理")
             all_video_features = []
             all_video_landmarks_3d = []
+            all_video_landmarks_3d_original = []
             all_video_landmarks_2d = []
             all_video_poses = []
             all_video_boxes = []
@@ -613,7 +657,8 @@ def extract_video_data(
         frames_to_process = video_images
         
         person_video_features = []
-        person_video_landmarks_3d = []
+        person_video_landmarks_3d = []  # 归一化后的关键点
+        person_video_landmarks_3d_original = []  # 原始关键点
         person_video_landmarks_2d = []
         person_video_poses = []
         person_video_boxes = []
@@ -697,11 +742,12 @@ def extract_video_data(
                 continue
             
             # 对齐和归一化关键点
-            aligned_normalized = aligner.align_and_normalize(landmarks_3d)
+            aligned_normalized = aligner.align_and_normalize(landmarks_3d, use_self_center=True)
             
             # 保存数据
             person_video_features.append(features)
-            person_video_landmarks_3d.append(aligned_normalized)
+            person_video_landmarks_3d.append(aligned_normalized)  # 归一化后的
+            person_video_landmarks_3d_original.append(landmarks_3d)  # 原始关键点
             person_video_landmarks_2d.append(landmarks_2d)
             person_video_poses.append(euler_angles if euler_angles is not None else np.array([0.0, 0.0, 0.0]))
             person_video_boxes.append(box)
@@ -744,7 +790,8 @@ def extract_video_data(
         logger.info(f"  需要处理剩余 {len(frames_to_process)} 张视频帧")
         
         person_video_features = []
-        person_video_landmarks_3d = []
+        person_video_landmarks_3d = []  # 归一化后的关键点
+        person_video_landmarks_3d_original = []  # 原始关键点
         person_video_landmarks_2d = []
         person_video_poses = []
         person_video_boxes = []
@@ -827,11 +874,12 @@ def extract_video_data(
                 continue
             
             # 对齐和归一化关键点
-            aligned_normalized = aligner.align_and_normalize(landmarks_3d)
+            aligned_normalized = aligner.align_and_normalize(landmarks_3d, use_self_center=True)
             
             # 保存数据
             person_video_features.append(features)
-            person_video_landmarks_3d.append(aligned_normalized)
+            person_video_landmarks_3d.append(aligned_normalized)  # 归一化后的
+            person_video_landmarks_3d_original.append(landmarks_3d)  # 原始关键点
             person_video_landmarks_2d.append(landmarks_2d)
             person_video_poses.append(euler_angles if euler_angles is not None else np.array([0.0, 0.0, 0.0]))
             person_video_boxes.append(box)
@@ -857,7 +905,8 @@ def extract_video_data(
         video_metadata.extend(person_metadata)
         
         person_video_features = []
-        person_video_landmarks_3d = []
+        person_video_landmarks_3d = []  # 归一化后的关键点
+        person_video_landmarks_3d_original = []  # 原始关键点
         person_video_landmarks_2d = []
         person_video_poses = []
         person_video_boxes = []
@@ -941,11 +990,12 @@ def extract_video_data(
                 continue
             
             # 对齐和归一化关键点
-            aligned_normalized = aligner.align_and_normalize(landmarks_3d)
+            aligned_normalized = aligner.align_and_normalize(landmarks_3d, use_self_center=True)
             
             # 保存数据
             person_video_features.append(features)
-            person_video_landmarks_3d.append(aligned_normalized)
+            person_video_landmarks_3d.append(aligned_normalized)  # 归一化后的
+            person_video_landmarks_3d_original.append(landmarks_3d)  # 原始关键点
             person_video_landmarks_2d.append(landmarks_2d)
             person_video_poses.append(euler_angles if euler_angles is not None else np.array([0.0, 0.0, 0.0]))
             person_video_boxes.append(box)
@@ -1027,7 +1077,8 @@ def extract_video_data(
         'metadata': video_metadata,
         'poses': video_poses.tolist(),
         'boxes': video_boxes.tolist(),
-        'landmarks_2d': video_landmarks_2d.tolist()
+        'landmarks_2d': video_landmarks_2d.tolist(),
+        'landmarks_3d_original': np.array(all_video_landmarks_3d_original).tolist() if all_video_landmarks_3d_original else []  # 保存原始关键点
     }
     
     video_metadata_path = output_dir / 'video_metadata.json'
