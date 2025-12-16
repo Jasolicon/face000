@@ -44,6 +44,7 @@ from train_transformer3D.dataset import Aligned3DFaceDataset, create_dataloader,
 from train_transformer3D.models_3d import TransformerDecoderOnly3D
 from train_transformer3D.models_3d_fulltransformer import TransformerEncoderDecoder3D
 from train_transformer3D.models_angle_warping import FinalRecommendedModel
+from train_transformer3D.models_3d_clip import TransformerDecoderOnly3D_CLIP
 from train_transformer.losses import CosineSimilarityLoss, MSELoss, CombinedLoss
 try:
     from torch.cuda.amp import autocast, GradScaler
@@ -511,6 +512,22 @@ def main():
             use_refinement=args.use_refinement,
             use_attention_refine=args.use_attention_refine,
             num_attention_layers=args.num_attention_layers
+        )
+    elif args.model_type == 'decoder_only_clip':
+        print("使用CLIP增强的解码器架构（TransformerDecoderOnly3D_CLIP）")
+        model = TransformerDecoderOnly3D_CLIP(
+            d_model=args.d_model,
+            nhead=args.nhead,
+            num_layers=args.num_decoder_layers,
+            dim_feedforward=args.dim_feedforward,
+            dropout=args.dropout,
+            num_keypoints=args.num_keypoints,
+            pose_dim=args.pose_dim,
+            use_pose_attention=args.use_pose_attention,
+            use_angle_pe=True,
+            use_angle_conditioning=True,
+            use_clip_pose_encoder=True,  # 使用CLIP编码姿态
+            device=str(device)
         )
     else:  # decoder_only
         print("使用仅解码器架构（TransformerDecoderOnly3D）")
