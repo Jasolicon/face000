@@ -106,9 +106,14 @@ features/
 *.jpg
 *.jpeg
 *.png
-!train/datas/**/*.jpg
-!train/datas/**/*.jpeg
-!train/datas/**/*.png
+# 只允许train/datas/face目录下的图片（用于训练数据）
+!train/datas/face/**/*.jpg
+!train/datas/face/**/*.jpeg
+!train/datas/face/**/*.png
+# 忽略视频帧图片（大文件）
+train/datas/video/**/*.jpg
+train/datas/video/**/*.jpeg
+train/datas/video/**/*.png
 !*.md
 !README.md
 
@@ -138,10 +143,14 @@ train_transformer/logs/
 train_transformer/checkpoints/
 !train_transformer/checkpoints/best_model.pth
 train_transformer/valid_images.json
+train_transformer/valid_images_normalized.json
 
 # train_transformer3D目录的checkpoints和logs
 train_transformer3D/checkpoints/
 train_transformer3D/checkpoints_universal/
+train_transformer3D/gan_checkpoints/
+# 注意：gan_checkpoints 下的 best_model.pth 也很大，应该忽略
+train_transformer3D/gan_checkpoints/best_model.pth
 !train_transformer3D/checkpoints/best_model.pth
 !train_transformer3D/checkpoints_universal/best_model.pth
 train_transformer3D/logs/
@@ -156,3 +165,10 @@ train_transformer3D/**/run_*/
 *.tar.gz
 *.rar
 *.7z
+
+# 超大JSON文件（数据文件）
+**/valid_images_normalized.json
+train_transformer copy/valid_images_normalized.json
+train_transformer copy/valid_images.json
+# HTML 可视化文件（大文件）
+feature_clusters*.html
