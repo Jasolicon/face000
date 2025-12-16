@@ -497,9 +497,9 @@ def main():
                        help='禁用混合精度训练')
     
     # 其他参数
-    parser.add_argument('--save_dir', type=str, default='train_transformer3D/checkpoints',
+    parser.add_argument('--save_dir', type=str, default='train_transformer3D/triplet/checkpoints',
                        help='模型保存目录')
-    parser.add_argument('--log_dir', type=str, default='train_transformer3D/logs',
+    parser.add_argument('--log_dir', type=str, default='train_transformer3D/triplet/logs',
                        help='TensorBoard日志目录')
     parser.add_argument('--resume', type=str, default=None,
                        help='恢复训练的检查点路径')
