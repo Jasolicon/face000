@@ -38,7 +38,7 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
-# 模型文件（大文件）
+# 模型文件（大文件）- 默认忽略所有模型文件
 *.pth
 *.pt
 *.ckpt
@@ -51,7 +51,11 @@ Thumbs.db
 *.model
 *.weights
 *.safetensors
-# !train_transformer/checkpoints/best_model.pth
+
+# 允许best_model.pth（必须在忽略规则之后）
+!**/best_model.pth
+!**/checkpoints/best_model.pth
+!**/checkpoints_universal/best_model.pth
 
 # 特征文件（大文件）
 *.npy
@@ -59,12 +63,28 @@ Thumbs.db
 *.hdf5
 *.h5
 
-# 检查点和日志
+# 检查点目录（排除best_model.pth）
 checkpoints/
+checkpoints_universal/
+!checkpoints/best_model.pth
+!checkpoints_universal/best_model.pth
+
+# 所有checkpoint文件（除了best_model）
+checkpoint_*.pth
+checkpoint_*.pt
+checkpoint_*.ckpt
+**/checkpoint_epoch_*.pth
+**/checkpoint_epoch_*.pt
+
+# 所有日志文件和目录
 logs/
+logs_universal/
 *.log
 *.tensorboard
 *.tfevents.*
+**/logs/
+**/logs_universal/
+**/run_*/
 
 # 数据集相关（大文件）
 train/datas/video/**/*.mp4
@@ -116,7 +136,19 @@ Desktop.ini
 landmark_analysis_mtcnn/
 train_transformer/logs/
 train_transformer/checkpoints/
+!train_transformer/checkpoints/best_model.pth
 train_transformer/valid_images.json
+
+# train_transformer3D目录的checkpoints和logs
+train_transformer3D/checkpoints/
+train_transformer3D/checkpoints_universal/
+!train_transformer3D/checkpoints/best_model.pth
+!train_transformer3D/checkpoints_universal/best_model.pth
+train_transformer3D/logs/
+train_transformer3D/logs_universal/
+train_transformer3D/**/checkpoint_*.pth
+train_transformer3D/**/checkpoint_*.pt
+train_transformer3D/**/run_*/
 
 # 其他大文件
 *.zip
@@ -124,4 +156,3 @@ train_transformer/valid_images.json
 *.tar.gz
 *.rar
 *.7z
-
