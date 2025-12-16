@@ -27,7 +27,7 @@ from utils import (
 from feature_manager import FeatureManager
 from train_transformer3D.utils_3d import get_3d_landmarks_and_pose
 from train_transformer3D.models_3d import TransformerDecoderOnly3D
-from train_transformer.utils_seed import set_seed
+from train_transformer3D.utils_seed import set_seed
 
 # 设置随机种子
 set_seed(42)

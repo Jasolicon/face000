@@ -22,7 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from utils import get_insightface_detector
 from train_transformer3D.utils_3d import get_3d_landmarks_and_pose
-from train_transformer.utils_seed import set_seed
+from train_transformer3D.utils_seed import set_seed
 from PIL import Image
 import cv2
 

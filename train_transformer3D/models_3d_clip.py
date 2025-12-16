@@ -12,8 +12,8 @@ from typing import Optional
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent))
 
-from train_transformer.models import AnglePositionalEncoding, AngleConditionedLayerNorm
-from train_transformer.utils_seed import set_seed
+from train_transformer3D.models_utils import AnglePositionalEncoding, AngleConditionedLayerNorm
+from train_transformer3D.utils_seed import set_seed
 
 # 设置随机种子
 set_seed(42)

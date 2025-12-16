@@ -30,7 +30,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from train_transformer3D.dataset import create_train_val_test_dataloaders
 from train_transformer3D.models_universal import UniversalFaceTransformer
 from train_transformer3D.losses_universal import UniversalFaceLoss
-from train_transformer.utils_seed import set_seed
+from train_transformer3D.utils_seed import set_seed
 
 
 def train_epoch(model, dataloader, criterion, optimizer, device, epoch, writer, 

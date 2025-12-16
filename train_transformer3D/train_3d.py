@@ -40,23 +40,19 @@ import matplotlib.pyplot as plt
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent))
 
-from train_transformer3D.dataset import Aligned3DFaceDataset, create_dataloader, create_train_val_test_dataloaders
+from train_transformer3D.dataset import create_train_val_test_dataloaders
 from train_transformer3D.models_3d import TransformerDecoderOnly3D
 from train_transformer3D.models_3d_fulltransformer import TransformerEncoderDecoder3D
 from train_transformer3D.models_angle_warping import FinalRecommendedModel
 from train_transformer3D.models_3d_clip import TransformerDecoderOnly3D_CLIP
-from train_transformer.losses import CosineSimilarityLoss, MSELoss, CombinedLoss
+from train_transformer3D.losses import CosineSimilarityLoss, MSELoss, CombinedLoss
 try:
     from torch.cuda.amp import autocast, GradScaler
     AMP_AVAILABLE = True
 except ImportError:
     AMP_AVAILABLE = False
     print("警告: 混合精度训练不可用（需要PyTorch >= 1.6）")
-try:
-    from train_transformer.angle_aware_loss import AngleAwareTripletLoss
-except ImportError:
-    AngleAwareTripletLoss = None
-from train_transformer.utils_seed import set_seed, set_deterministic_mode
+from train_transformer3D.utils_seed import set_seed, set_deterministic_mode
 
 # 设置随机种子
 set_seed(42)

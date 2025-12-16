@@ -12,8 +12,8 @@ from typing import Optional
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent))
 
-from train_transformer.models import AnglePositionalEncoding, AngleConditionedLayerNorm
-from train_transformer.utils_seed import set_seed
+from train_transformer3D.models_utils import AnglePositionalEncoding, AngleConditionedLayerNorm
+from train_transformer3D.utils_seed import set_seed
 
 # 设置随机种子
 set_seed(42)
@@ -342,23 +342,24 @@ if __name__ == "__main__":
     print(f"输出范围: [{output.min().item():.4f}, {output.max().item():.4f}]")
     
     # 对比参数量
-    print("\n" + "-" * 70)
-    print("参数量对比:")
-    print("-" * 70)
-    from train_transformer.models_decoder_only import TransformerDecoderOnly
-    decoder_model = TransformerDecoderOnly(
-        d_model=512,  # InsightFace特征维度
-        nhead=8,
-        num_layers=4,
-        dim_feedforward=2048
-    )
-    decoder_params = sum(p.numel() for p in decoder_model.parameters())
-    decoder3d_params = sum(p.numel() for p in model.parameters())
-    
-    print(f"TransformerDecoderOnly (2D): {decoder_params:,}")
-    print(f"TransformerDecoderOnly3D (3D): {decoder3d_params:,}")
-    print(f"差异: {decoder3d_params - decoder_params:,} ({(decoder3d_params - decoder_params) / decoder_params * 100:.1f}%)")
+    # 参数量对比（已注释，因为需要外部依赖）
+    # print("\n" + "-" * 70)
+    # print("参数量对比:")
+    # print("-" * 70)
+    # from train_transformer.models_decoder_only import TransformerDecoderOnly
+    # decoder_model = TransformerDecoderOnly(
+    #     d_model=512,  # InsightFace特征维度
+    #     nhead=8,
+    #     num_layers=4,
+    #     dim_feedforward=2048
+    # )
+    # decoder_params = sum(p.numel() for p in decoder_model.parameters())
+    # decoder3d_params = sum(p.numel() for p in model.parameters())
+    # 
+    # print(f"TransformerDecoderOnly (2D): {decoder_params:,}")
+    # print(f"TransformerDecoderOnly3D (3D): {decoder3d_params:,}")
+    # print(f"差异: {decoder3d_params - decoder_params:,} ({(decoder3d_params - decoder_params) / decoder_params * 100:.1f}%)")
     
     print("\n" + "=" * 70)
-    print("测试完成！")
+    print("模型初始化完成！")
     print("=" * 70)
