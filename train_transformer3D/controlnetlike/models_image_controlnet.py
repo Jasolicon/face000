@@ -15,6 +15,7 @@ import torch.nn.functional as F
 import sys
 from pathlib import Path
 from typing import Optional, Tuple
+import numpy as np
 
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -22,6 +23,37 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from train_transformer3D.utils_seed import set_seed
 
 set_seed(42)
+
+
+class ZeroConv1d(nn.Module):
+    """
+    零卷积层（Zero Convolution）for 1D features
+    ControlNet的核心：初始时输出为零，不干扰主网络
+    训练过程中逐渐学习控制信号
+    """
+    def __init__(self, in_channels: int, out_channels: int):
+        super().__init__()
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size=1)
+        # 初始化为零
+        nn.init.zeros_(self.conv.weight)
+        if self.conv.bias is not None:
+            nn.init.zeros_(self.conv.bias)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: 输入特征 [batch, in_channels, length] 或 [batch, in_channels]
+        Returns:
+            output: 输出特征 [batch, out_channels, length] 或 [batch, out_channels]
+        """
+        if x.dim() == 2:
+            # [batch, in_channels] -> [batch, in_channels, 1]
+            x = x.unsqueeze(-1)
+            output = self.conv(x)  # [batch, out_channels, 1]
+            output = output.squeeze(-1)  # [batch, out_channels]
+        else:
+            output = self.conv(x)
+        return output
 
 
 class ZeroConv2d(nn.Module):
@@ -43,22 +75,132 @@ class ZeroConv2d(nn.Module):
 class ImageEncoder(nn.Module):
     """
     图像编码器：将图像编码为特征
-    使用简化的CNN架构
+    使用InsightFace的冻结卷积backbone（去掉全连接部分）
+    InsightFace通常使用ResNet作为backbone，我们使用timm中的ResNet
     """
     def __init__(
         self,
         in_channels: int = 3,
         feature_dim: int = 512,
-        image_size: int = 112  # InsightFace标准尺寸
+        image_size: int = 112,  # InsightFace标准尺寸
+        use_insightface: bool = True,
+        freeze_backbone: bool = True
     ):
         super().__init__()
         self.feature_dim = feature_dim
         self.image_size = image_size
+        self.use_insightface = use_insightface
+        self.freeze_backbone = freeze_backbone
         
+        if use_insightface:
+            # 尝试使用真正的InsightFace预训练模型
+            # 方案1：尝试使用insightface库（ONNX模型）
+            insightface_loaded = False
+            try:
+                import insightface
+                from insightface.app import FaceAnalysis
+                import onnxruntime as ort
+                
+                # 尝试加载InsightFace模型
+                try:
+                    # 检测可用的providers
+                    available_providers = ort.get_available_providers()
+                    if torch.cuda.is_available() and 'CUDAExecutionProvider' in available_providers:
+                        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+                        ctx_id = 0
+                    else:
+                        providers = ['CPUExecutionProvider']
+                        ctx_id = -1
+                    
+                    # 初始化InsightFace模型
+                    self.insightface_app = FaceAnalysis(
+                        name='buffalo_l',  # 或 'buffalo_s', 'buffalo_m'
+                        providers=providers
+                    )
+                    self.insightface_app.prepare(ctx_id=ctx_id, det_size=(640, 640))
+                    
+                    # 获取backbone模型（recognition model）
+                    # InsightFace的recognition model就是backbone + 全连接层
+                    # 我们需要提取backbone部分
+                    # 注意：InsightFace的ONNX模型结构较复杂，这里我们使用一个变通方案
+                    # 在forward中直接调用InsightFace提取特征
+                    
+                    insightface_loaded = True
+                    print("✓ 成功加载InsightFace模型（ONNX格式）")
+                    print("  注意：将在forward中直接使用InsightFace提取特征")
+                    
+                    # 特征投影层（InsightFace输出512维，直接使用或投影）
+                    # InsightFace已经输出512维特征，如果feature_dim也是512，可以直接使用
+                    if feature_dim == 512:
+                        self.feature_proj = nn.Identity()  # 直接使用，无需投影
+                    else:
+                        self.feature_proj = nn.Sequential(
+                            nn.Linear(512, feature_dim),
+                            nn.BatchNorm1d(feature_dim),
+                            nn.ReLU(inplace=True)
+                        )
+                    
+                except Exception as e:
+                    print(f"⚠️ InsightFace ONNX模型加载失败: {e}")
+                    print("  将尝试使用timm的ResNet50（ImageNet预训练）作为替代")
+                    insightface_loaded = False
+            
+            except ImportError:
+                print("⚠️ insightface库未安装")
+                print("  将使用timm的ResNet50（ImageNet预训练）作为替代")
+                print("  如需使用真正的InsightFace预训练，请安装: pip install insightface onnxruntime")
+                insightface_loaded = False
+            
+            # 方案2：如果InsightFace加载失败，使用timm的ResNet50（ImageNet预训练）
+            if not insightface_loaded:
+                try:
+                    import timm
+                    # 使用ResNet50作为backbone（ImageNet预训练，不是InsightFace预训练）
+                    self.backbone = timm.create_model(
+                        'resnet50',
+                        pretrained=True,  # ImageNet预训练
+                        num_classes=0,  # 移除分类头，只使用backbone
+                        global_pool='avg'  # 全局平均池化
+                    )
+                    backbone_output_dim = 2048  # ResNet50的输出维度
+                    print("✓ 使用ResNet50作为backbone（ImageNet预训练，冻结卷积部分）")
+                    print("  注意：这是ImageNet预训练，不是InsightFace预训练")
+                    
+                    # 冻结backbone参数
+                    if freeze_backbone:
+                        for param in self.backbone.parameters():
+                            param.requires_grad = False
+                        print("✓ Backbone已冻结")
+                    
+                    # 特征投影层
+                    self.feature_proj = nn.Sequential(
+                        nn.Linear(backbone_output_dim, feature_dim),
+                        nn.BatchNorm1d(feature_dim),
+                        nn.ReLU(inplace=True)
+                    )
+                    
+                except ImportError:
+                    print("⚠️ timm未安装，使用自定义CNN编码器")
+                    print("  建议安装: pip install timm")
+                    self.use_insightface = False
+                    self._init_custom_encoder()
+                except Exception as e:
+                    print(f"⚠️ 加载backbone失败: {e}")
+                    print("  使用自定义CNN编码器作为备用")
+                    self.use_insightface = False
+                    self._init_custom_encoder()
+        else:
+            self._init_custom_encoder()
+        
+        if not self.use_insightface:
+            self._init_weights()
+    
+    def _init_custom_encoder(self):
+        """初始化自定义CNN编码器（备用方案）"""
         # CNN编码器
         self.encoder = nn.Sequential(
             # 第一层
-            nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             # 第二层
@@ -78,12 +220,10 @@ class ImageEncoder(nn.Module):
         )
         
         # 特征投影
-        self.feature_proj = nn.Linear(512, feature_dim)
-        
-        self._init_weights()
+        self.feature_proj = nn.Linear(512, self.feature_dim)
     
     def _init_weights(self):
-        """初始化权重"""
+        """初始化权重（仅用于自定义编码器）"""
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -100,16 +240,82 @@ class ImageEncoder(nn.Module):
     def forward(self, image: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            image: 输入图像 [batch, 3, H, W]
+            image: 输入图像 [batch, 3, H, W]（已归一化到[-1, 1]）
         Returns:
             features: 图像特征 [batch, feature_dim]
         """
-        # CNN编码
-        x = self.encoder(image)  # [batch, 512, 1, 1]
-        x = x.view(x.size(0), -1)  # [batch, 512]
-        
-        # 特征投影
-        features = self.feature_proj(x)  # [batch, feature_dim]
+        if self.use_insightface:
+            # 检查是否使用真正的InsightFace模型（ONNX）
+            if hasattr(self, 'insightface_app'):
+                # 使用真正的InsightFace模型提取特征
+                batch_size = image.size(0)
+                features_list = []
+                
+                # 将输入从[-1, 1]转换到[0, 255]（BGR格式，InsightFace需要）
+                image_normalized = (image + 1) / 2.0  # [-1, 1] -> [0, 1]
+                image_normalized = image_normalized * 255.0  # [0, 1] -> [0, 255]
+                
+                # 转换为numpy并处理每个样本
+                for i in range(batch_size):
+                    img_tensor = image_normalized[i]  # [3, H, W]
+                    
+                    # 转换为numpy array [H, W, 3] BGR格式
+                    img_np = img_tensor.permute(1, 2, 0).cpu().numpy()  # [H, W, 3]
+                    img_np = img_np[:, :, ::-1]  # RGB -> BGR
+                    img_np = img_np.astype(np.uint8)
+                    
+                    # 使用InsightFace提取特征
+                    faces = self.insightface_app.get(img_np)
+                    if len(faces) > 0:
+                        # 使用第一个人脸的特征（已经归一化的512维特征）
+                        face_features = faces[0].normed_embedding  # [512]
+                    else:
+                        # 如果没有检测到人脸，使用零向量
+                        face_features = np.zeros(512, dtype=np.float32)
+                    
+                    features_list.append(face_features)
+                
+                # 转换为tensor
+                features_np = np.stack(features_list, axis=0)  # [batch, 512]
+                features_tensor = torch.from_numpy(features_np).float().to(image.device)
+                
+                # 特征投影（如果需要）
+                features = self.feature_proj(features_tensor)  # [batch, feature_dim]
+                
+            elif hasattr(self, 'backbone'):
+                # 使用timm的ResNet50（ImageNet预训练）
+                # 注意：timm模型通常期望ImageNet归一化，但我们的输入是[-1, 1]
+                # 需要转换归一化
+                # ImageNet归一化: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                # 我们的输入: [-1, 1] -> [0, 1] -> ImageNet归一化
+                
+                # 将输入从[-1, 1]转换到[0, 1]
+                image_normalized = (image + 1) / 2.0
+                
+                # ImageNet归一化
+                mean = torch.tensor([0.485, 0.456, 0.406], device=image.device).view(1, 3, 1, 1)
+                std = torch.tensor([0.229, 0.224, 0.225], device=image.device).view(1, 3, 1, 1)
+                image_normalized = (image_normalized - mean) / std
+                
+                # 通过backbone提取特征（冻结的卷积部分）
+                with torch.set_grad_enabled(not self.freeze_backbone):
+                    backbone_features = self.backbone(image_normalized)  # [batch, 2048]
+                
+                # 特征投影
+                features = self.feature_proj(backbone_features)  # [batch, feature_dim]
+            else:
+                # 如果都没有，使用自定义编码器
+                x = self.encoder(image)  # [batch, 512, 1, 1]
+                x = x.view(x.size(0), -1)  # [batch, 512]
+                features = self.feature_proj(x)  # [batch, feature_dim]
+        else:
+            # 使用自定义编码器
+            # CNN编码
+            x = self.encoder(image)  # [batch, 512, 1, 1]
+            x = x.view(x.size(0), -1)  # [batch, 512]
+            
+            # 特征投影
+            features = self.feature_proj(x)  # [batch, feature_dim]
         
         return features
 
@@ -333,18 +539,22 @@ class ImageControlNet(nn.Module):
         image_size: int = 112,
         in_channels: int = 3,
         num_control_layers: int = 3,
-        freeze_generator: bool = False  # 是否冻结生成器
+        freeze_generator: bool = False,  # 是否冻结生成器
+        use_insightface: bool = True,    # 是否使用InsightFace backbone
+        freeze_backbone: bool = True     # 是否冻结backbone参数
     ):
         super().__init__()
         self.feature_dim = feature_dim
         self.pose_dim = pose_dim
         self.image_size = image_size
         
-        # 图像编码器
+        # 图像编码器（使用InsightFace的冻结卷积backbone）
         self.image_encoder = ImageEncoder(
             in_channels=in_channels,
             feature_dim=feature_dim,
-            image_size=image_size
+            image_size=image_size,
+            use_insightface=use_insightface,  # 使用InsightFace backbone
+            freeze_backbone=freeze_backbone   # 冻结backbone参数
         )
         
         # 姿势提取器

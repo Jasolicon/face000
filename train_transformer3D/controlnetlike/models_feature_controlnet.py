@@ -313,7 +313,8 @@ class FeatureControlNet(nn.Module):
         control_signal = self.control_branch(control_angle)  # [batch, feature_dim]
         
         # ========== 3. 零卷积处理控制信号 ==========
-        control_output = self.zero_conv(control_signal.unsqueeze(-1)).squeeze(-1)  # [batch, feature_dim]
+        # ZeroConv1d的forward方法已经处理了2D输入（会自动unsqueeze和squeeze）
+        control_output = self.zero_conv(control_signal)  # [batch, feature_dim]
         
         # ========== 4. 融合主网络输出和控制信号 ==========
         # 控制信号通过零卷积后，初始时为零，不会干扰主网络
