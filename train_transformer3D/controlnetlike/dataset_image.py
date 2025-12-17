@@ -178,17 +178,34 @@ class ImageControlDataset(Dataset):
         """构建样本对"""
         samples = []
         
+        # 获取真正的元数据列表
+        # front_metadata 是一个字典，包含 'metadata' 键，值是元数据列表
+        if isinstance(self.front_metadata, dict) and 'metadata' in self.front_metadata:
+            front_metadata_list = self.front_metadata['metadata']
+        else:
+            # 如果直接是列表，则使用它
+            front_metadata_list = self.front_metadata if isinstance(self.front_metadata, list) else []
+        
+        if isinstance(self.video_metadata, dict) and 'metadata' in self.video_metadata:
+            video_metadata_list = self.video_metadata['metadata']
+        else:
+            video_metadata_list = self.video_metadata if isinstance(self.video_metadata, list) else []
+        
         # 按person_name组织数据
         front_by_person = defaultdict(list)
         video_by_person = defaultdict(list)
         
         # 组织正面图数据
-        for i, metadata in enumerate(self.front_metadata):
-            person_name = metadata.get('person_name', f'person_{i}')
-            image_path = metadata.get('image_path', '')
-            if not image_path:
-                # 尝试从其他字段获取路径
-                image_path = metadata.get('file_path', '')
+        for i, metadata in enumerate(front_metadata_list):
+            if isinstance(metadata, dict):
+                person_name = metadata.get('person_name', f'person_{i}')
+                image_path = metadata.get('image_path', '')
+                if not image_path:
+                    # 尝试从其他字段获取路径
+                    image_path = metadata.get('file_path', '')
+            else:
+                person_name = f'person_{i}'
+                image_path = ''
             
             front_by_person[person_name].append({
                 'index': i,
@@ -198,11 +215,15 @@ class ImageControlDataset(Dataset):
             })
         
         # 组织视频帧数据
-        for i, metadata in enumerate(self.video_metadata):
-            person_name = metadata.get('person_name', f'person_{i}')
-            image_path = metadata.get('image_path', '')
-            if not image_path:
-                image_path = metadata.get('file_path', '')
+        for i, metadata in enumerate(video_metadata_list):
+            if isinstance(metadata, dict):
+                person_name = metadata.get('person_name', f'person_{i}')
+                image_path = metadata.get('image_path', '')
+                if not image_path:
+                    image_path = metadata.get('file_path', '')
+            else:
+                person_name = f'person_{i}'
+                image_path = ''
             
             video_by_person[person_name].append({
                 'index': i,

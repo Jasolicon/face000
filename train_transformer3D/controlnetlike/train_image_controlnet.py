@@ -38,6 +38,7 @@ import random
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -507,8 +508,64 @@ def main():
         
         # 记录到TensorBoard
         writer.add_scalar('Epoch/TrainLoss', train_metrics['total_loss'], epoch)
+        writer.add_scalar('Epoch/TrainImageLoss', train_metrics['image_loss'], epoch)
+        writer.add_scalar('Epoch/TrainPoseLoss', train_metrics['pose_loss'], epoch)
         writer.add_scalar('Epoch/ValLoss', val_metrics['total_loss'], epoch)
+        writer.add_scalar('Epoch/ValImageLoss', val_metrics['image_loss'], epoch)
         writer.add_scalar('Epoch/ValPSNR', val_metrics['psnr'], epoch)
+        
+        # 定期可视化生成的图像（每10个epoch）
+        if (epoch + 1) % 10 == 0:
+            model.eval()
+            with torch.no_grad():
+                # 获取一个验证批次
+                val_batch = next(iter(val_loader))
+                source_image = val_batch['source_image'][:8].to(device)
+                target_pose = val_batch['target_pose'][:8].to(device)
+                target_image = val_batch['target_image'][:8].to(device)
+                
+                # 生成预测图像
+                output_image, _, source_pose = model(
+                    image=source_image,
+                    target_pose=target_pose,
+                    return_control_signal=False,
+                    return_source_pose=True
+                )
+                
+                # 将图像从[-1, 1]转换到[0, 1]用于可视化
+                source_vis = (source_image + 1) / 2
+                target_vis = (target_image + 1) / 2
+                output_vis = (output_image + 1) / 2
+                
+                # 创建图像网格（每行：源图像、目标图像、生成图像）
+                # 合并图像：源、目标、生成
+                image_grid = torch.cat([
+                    source_vis,
+                    target_vis,
+                    output_vis
+                ], dim=0)  # [24, 3, H, W]
+                
+                # 创建网格图像
+                grid = vutils.make_grid(image_grid, nrow=8, normalize=False, padding=2)
+                writer.add_image('Images/Comparison', grid, epoch)
+                
+                # 单独可视化每个样本（前4个）
+                for i in range(min(4, source_image.size(0))):
+                    sample_grid = torch.stack([
+                        source_vis[i],
+                        target_vis[i],
+                        output_vis[i]
+                    ], dim=0)
+                    grid_single = vutils.make_grid(sample_grid, nrow=3, normalize=False, padding=2)
+                    writer.add_image(f'Images/Sample_{i}', grid_single, epoch)
+                
+                # 可视化姿势预测
+                pose_diff = target_pose - source_pose
+                writer.add_histogram('Pose/Target', target_pose, epoch)
+                writer.add_histogram('Pose/Source', source_pose, epoch)
+                writer.add_histogram('Pose/Difference', pose_diff, epoch)
+            
+            model.train()
         
         # 打印进度
         print(f"\nEpoch {epoch+1}/{args.epochs}")

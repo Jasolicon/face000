@@ -177,9 +177,25 @@ class FeatureControlDataset(Dataset):
         front_by_person = defaultdict(list)
         video_by_person = defaultdict(list)
         
+        # 获取真正的元数据列表
+        # front_metadata 是一个字典，包含 'metadata' 键，值是元数据列表
+        if isinstance(self.front_metadata, dict) and 'metadata' in self.front_metadata:
+            front_metadata_list = self.front_metadata['metadata']
+        else:
+            # 如果直接是列表，则使用它
+            front_metadata_list = self.front_metadata if isinstance(self.front_metadata, list) else []
+        
+        if isinstance(self.video_metadata, dict) and 'metadata' in self.video_metadata:
+            video_metadata_list = self.video_metadata['metadata']
+        else:
+            video_metadata_list = self.video_metadata if isinstance(self.video_metadata, list) else []
+        
         # 组织正面图数据
-        for i, metadata in enumerate(self.front_metadata):
-            person_name = metadata.get('person_name', f'person_{i}')
+        for i, metadata in enumerate(front_metadata_list):
+            if isinstance(metadata, dict):
+                person_name = metadata.get('person_name', f'person_{i}')
+            else:
+                person_name = f'person_{i}'
             front_by_person[person_name].append({
                 'index': i,
                 'feature': self.front_features[i],
@@ -188,8 +204,11 @@ class FeatureControlDataset(Dataset):
             })
         
         # 组织视频帧数据
-        for i, metadata in enumerate(self.video_metadata):
-            person_name = metadata.get('person_name', f'person_{i}')
+        for i, metadata in enumerate(video_metadata_list):
+            if isinstance(metadata, dict):
+                person_name = metadata.get('person_name', f'person_{i}')
+            else:
+                person_name = f'person_{i}'
             video_by_person[person_name].append({
                 'index': i,
                 'feature': self.video_features[i],

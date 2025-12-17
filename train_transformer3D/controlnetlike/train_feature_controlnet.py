@@ -38,6 +38,7 @@ import random
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 # 添加父目录到路径
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -531,8 +532,70 @@ def main():
         
         # 记录到TensorBoard
         writer.add_scalar('Epoch/TrainLoss', train_metrics['total_loss'], epoch)
+        writer.add_scalar('Epoch/TrainFeatureLoss', train_metrics['feature_loss'], epoch)
+        writer.add_scalar('Epoch/TrainIdentityLoss', train_metrics['identity_loss'], epoch)
         writer.add_scalar('Epoch/ValLoss', val_metrics['total_loss'], epoch)
+        writer.add_scalar('Epoch/ValFeatureLoss', val_metrics['feature_loss'], epoch)
         writer.add_scalar('Epoch/ValCosineSim', val_metrics['cosine_sim'], epoch)
+        
+        # 定期可视化特征分布（每10个epoch）
+        if (epoch + 1) % 10 == 0:
+            model.eval()
+            with torch.no_grad():
+                # 获取一个验证批次
+                val_batch = next(iter(val_loader))
+                source_features = val_batch['source_features'][:8].to(device)
+                source_pose = val_batch['source_pose'][:8].to(device)
+                target_angle = val_batch['target_angle'][:8].to(device)
+                target_features = val_batch['target_features'][:8].to(device)
+                
+                # 生成预测特征
+                output_features, _ = model(
+                    features=source_features,
+                    pose=source_pose,
+                    control_angle=target_angle,
+                    return_control_signal=False
+                )
+                
+                # 可视化特征分布（使用直方图）
+                writer.add_histogram('Features/Source', source_features, epoch)
+                writer.add_histogram('Features/Target', target_features, epoch)
+                writer.add_histogram('Features/Predicted', output_features, epoch)
+                
+                # 计算特征相似度矩阵（可视化）
+                source_norm = F.normalize(source_features, p=2, dim=1)
+                target_norm = F.normalize(target_features, p=2, dim=1)
+                pred_norm = F.normalize(output_features, p=2, dim=1)
+                
+                # 相似度矩阵
+                source_target_sim = torch.mm(source_norm, target_norm.t())
+                pred_target_sim = torch.mm(pred_norm, target_norm.t())
+                
+                # 转换为numpy用于可视化
+                import numpy as np
+                source_target_sim_np = source_target_sim.cpu().numpy()
+                pred_target_sim_np = pred_target_sim.cpu().numpy()
+                
+                # 使用matplotlib创建热图
+                fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+                
+                im1 = axes[0].imshow(source_target_sim_np, cmap='viridis', aspect='auto')
+                axes[0].set_title('源特征-目标特征相似度', fontsize=12)
+                axes[0].set_xlabel('目标特征索引')
+                axes[0].set_ylabel('源特征索引')
+                plt.colorbar(im1, ax=axes[0])
+                
+                im2 = axes[1].imshow(pred_target_sim_np, cmap='viridis', aspect='auto')
+                axes[1].set_title('预测特征-目标特征相似度', fontsize=12)
+                axes[1].set_xlabel('目标特征索引')
+                axes[1].set_ylabel('预测特征索引')
+                plt.colorbar(im2, ax=axes[1])
+                
+                plt.tight_layout()
+                writer.add_figure('Features/SimilarityMatrix', fig, epoch)
+                plt.close()
+            
+            model.train()
         
         # 打印进度
         print(f"\nEpoch {epoch+1}/{args.epochs}")
